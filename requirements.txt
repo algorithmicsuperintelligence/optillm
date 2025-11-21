@@ -35,4 +35,4 @@ datasets
 mcp
 # MLX support for Apple Silicon optimization
 mlx-lm>=0.24.0; platform_machine=="arm64" and sys_platform=="darwin"
-math_verify
+math-verify
