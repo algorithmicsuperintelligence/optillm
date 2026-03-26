@@ -91,6 +91,13 @@ def get_config():
             default_client = Cerebras(api_key=API_KEY, base_url=base_url, http_client=http_client)
         else:
             default_client = Cerebras(api_key=API_KEY, http_client=http_client)
+    elif os.environ.get("MINIMAX_API_KEY"):
+        API_KEY = os.environ.get("MINIMAX_API_KEY")
+        base_url = server_config['base_url']
+        if base_url == "":
+            base_url = "https://api.minimax.io/v1"
+        default_client = OpenAI(api_key=API_KEY, base_url=base_url, http_client=http_client)
+        logger.info(f"Created MiniMax client with base_url: {base_url}")
     elif os.environ.get("OPENAI_API_KEY"):
         API_KEY = os.environ.get("OPENAI_API_KEY")
         base_url = server_config['base_url']
@@ -758,6 +765,15 @@ def proxy():
 
     base_url = server_config['base_url']
     default_client, api_key = get_config()
+
+    # Clamp temperature for MiniMax provider: must be in (0.0, 1.0]
+    if os.environ.get("MINIMAX_API_KEY") and 'temperature' in request_config:
+        temp = request_config['temperature']
+        if temp is not None:
+            if temp <= 0:
+                request_config['temperature'] = 0.01
+            elif temp > 1.0:
+                request_config['temperature'] = 1.0
 
     operation, approaches, model = parse_combined_approach(model, known_approaches, plugin_approaches)
 
