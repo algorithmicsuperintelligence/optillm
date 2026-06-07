@@ -206,7 +206,7 @@ We support all major LLM providers and models for inference. You need to set the
 |----------|-------------------------------|------------------|
 | OptiLLM | `OPTILLM_API_KEY` | Uses the inbuilt local server for inference, supports logprobs and decoding techniques like `cot_decoding` & `entropy_decoding` |
 | OpenAI | `OPENAI_API_KEY` | You can use this with any OpenAI compatible endpoint (e.g. OpenRouter) by setting the `base_url` |
-| MiniMax | `MINIMAX_API_KEY` | Uses the [MiniMax API](https://www.minimax.io/) (OpenAI-compatible). Supports MiniMax-M2.7 and other models. Temperature is auto-clamped to (0, 1] |
+| MiniMax | `MINIMAX_API_KEY` | Uses the [MiniMax API](https://www.minimax.io/) (OpenAI-compatible). Supports MiniMax-M3 (default, 512K context, max output 128K), MiniMax-M2.7, and MiniMax-M2.7-highspeed. Temperature is auto-clamped to (0, 1] |
 | Cerebras | `CEREBRAS_API_KEY` | You can use this for fast inference with supported models, see [docs for details](https://inference-docs.cerebras.ai/introduction) |
 | Azure OpenAI | `AZURE_OPENAI_API_KEY`<br>`AZURE_API_VERSION`<br>`AZURE_API_BASE` | - |
 | Azure OpenAI (Managed Identity) | `AZURE_API_VERSION`<br>`AZURE_API_BASE` | Login required using `az login`, see [docs for details](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/managed-identity) |

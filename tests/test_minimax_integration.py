@@ -34,7 +34,7 @@ class TestMiniMaxIntegration(unittest.TestCase):
     def test_basic_completion(self):
         """Test basic chat completion with MiniMax API."""
         response = self.client.chat.completions.create(
-            model="MiniMax-M2.7",
+            model="MiniMax-M3",
             messages=[
                 {"role": "user", "content": "Say hello in one word."}
             ],
@@ -50,7 +50,7 @@ class TestMiniMaxIntegration(unittest.TestCase):
     def test_temperature_boundary(self):
         """Test that MiniMax API accepts temperature at boundary value 0.01."""
         response = self.client.chat.completions.create(
-            model="MiniMax-M2.7",
+            model="MiniMax-M3",
             messages=[
                 {"role": "user", "content": "What is 2+2?"}
             ],
@@ -64,7 +64,7 @@ class TestMiniMaxIntegration(unittest.TestCase):
     def test_streaming_completion(self):
         """Test streaming chat completion with MiniMax API."""
         stream = self.client.chat.completions.create(
-            model="MiniMax-M2.7",
+            model="MiniMax-M3",
             messages=[
                 {"role": "user", "content": "Count from 1 to 3."}
             ],
