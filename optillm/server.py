@@ -203,24 +203,38 @@ known_approaches = ["none", "mcts", "bon", "moa", "rto", "z3", "self_consistency
 
 plugin_approaches = {}
 
+def _is_multimodal_content(content: list) -> bool:
+    for item in content:
+        if not isinstance(item, dict):
+            continue
+        item_type = item.get('type')
+        if item_type and item_type != 'text':
+            return True
+        if 'image_url' in item or 'image' in item:
+            return True
+    return False
+
 def normalize_message_content(messages):
     """
-    Ensure all message content fields are strings, not lists.
-    Some models don't handle list-format content correctly.
+    Flatten text-only list content to strings for models that expect plain text.
+
+    Multimodal content (image_url, etc.) is preserved as a list so vision-capable
+    upstream models receive images intact.
     """
     normalized_messages = []
     for message in messages:
         normalized_message = message.copy()
         content = message.get('content', '')
 
-        # Convert list content to string if needed
         if isinstance(content, list):
-            # Extract text content from the list
-            text_content = ' '.join(
-                item.get('text', '') for item in content
-                if isinstance(item, dict) and item.get('type') == 'text'
-            )
-            normalized_message['content'] = text_content
+            if _is_multimodal_content(content):
+                normalized_message['content'] = content
+            else:
+                text_content = ' '.join(
+                    item.get('text', '') for item in content
+                    if isinstance(item, dict) and item.get('type') == 'text'
+                )
+                normalized_message['content'] = text_content
 
         normalized_messages.append(normalized_message)
 
