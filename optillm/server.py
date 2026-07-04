@@ -416,8 +416,15 @@ def execute_single_approach(approach, system_prompt, initial_query, client, mode
             # since the full token count is already in the response
             return response, 0
         elif approach == 'mcts':
-            return chat_with_mcts(system_prompt, initial_query, client, model, server_config['mcts_simulations'],
-                                            server_config['mcts_exploration'], server_config['mcts_depth'], request_config, request_id)
+            # Read the MCTS params from the per-request config (falling back to
+            # the server defaults) instead of the shared global server_config.
+            # Reading them off the global races with concurrent requests that
+            # overwrite it between the write in proxy() and this read (issue #304).
+            mcts_config = request_config or {}
+            return chat_with_mcts(system_prompt, initial_query, client, model,
+                                            mcts_config.get('mcts_simulations', server_config['mcts_simulations']),
+                                            mcts_config.get('mcts_exploration', server_config['mcts_exploration']),
+                                            mcts_config.get('mcts_depth', server_config['mcts_depth']), request_config, request_id)
         elif approach == 'bon':
             return  best_of_n_sampling(system_prompt, initial_query, client, model, server_config['best_of_n'], request_config, request_id)
         elif approach == 'moa':
@@ -744,9 +751,14 @@ def proxy():
 
     optillm_approach = data.get('optillm_approach', server_config['approach'])
     logger.debug(data)
-    server_config['mcts_depth'] = data.get('mcts_depth', server_config['mcts_depth'])
-    server_config['mcts_exploration'] = data.get('mcts_exploration', server_config['mcts_exploration'])
-    server_config['mcts_simulations'] = data.get('mcts_simulations', server_config['mcts_simulations'])
+    # MCTS params are resolved per-request in execute_single_approach: any
+    # client-sent mcts_* values are already in request_config (copied from the
+    # request body above) and the server defaults are used as the fallback there.
+    # We deliberately do NOT write them back into the shared global server_config:
+    # concurrent requests would overwrite each other's values between the write
+    # here and the read in execute_single_approach, silently corrupting results
+    # under any threaded WSGI server (and the write also leaked one request's
+    # params into every later request). See issue #304.
 
     system_prompt, initial_query, message_optillm_approach = parse_conversation(messages)
 
