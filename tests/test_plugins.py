@@ -68,6 +68,62 @@ def test_memory_plugin_structure():
     assert hasattr(plugin, 'Memory')  # Check for Memory class
 
 
+def test_memory_plugin_persistence():
+    """Test opt-in file-backed persistence for the memory plugin (issue #111).
+
+    Covers the round trip, graceful degradation on a missing/corrupt file, and
+    that the default (no persist_path) never touches the filesystem.
+    """
+    import json
+    import tempfile
+    from optillm.plugins.memory_plugin import Memory
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "memory.json")
+
+        # Round trip: items written by one instance load into the next.
+        m1 = Memory(persist_path=path)
+        m1.add("alpha")
+        m1.add("beta")
+        assert os.path.exists(path), "add() should persist when persist_path is set"
+
+        m2 = Memory(persist_path=path)
+        assert m2.items == ["alpha", "beta"], "persisted items should load on init"
+
+        # A missing file is a valid first run, not an error.
+        missing = os.path.join(tmp, "does_not_exist.json")
+        m3 = Memory(persist_path=missing)
+        assert m3.items == []
+
+        # A corrupt file degrades to an empty store without raising.
+        corrupt = os.path.join(tmp, "corrupt.json")
+        with open(corrupt, "w", encoding="utf-8") as f:
+            f.write("{not valid json")
+        m4 = Memory(persist_path=corrupt)
+        assert m4.items == []
+
+        # A non-list JSON payload is ignored rather than trusted.
+        wrong_shape = os.path.join(tmp, "wrong.json")
+        with open(wrong_shape, "w", encoding="utf-8") as f:
+            json.dump({"items": ["x"]}, f)
+        m5 = Memory(persist_path=wrong_shape)
+        assert m5.items == []
+
+        # max_size is honoured on load (most recent items win).
+        big = os.path.join(tmp, "big.json")
+        with open(big, "w", encoding="utf-8") as f:
+            json.dump([str(i) for i in range(10)], f)
+        m6 = Memory(max_size=3, persist_path=big)
+        assert m6.items == ["7", "8", "9"]
+
+        # Default behaviour is unchanged: no persist_path means no file I/O.
+        no_persist = os.path.join(tmp, "should_not_be_created.json")
+        m7 = Memory()
+        m7.add("gamma")
+        assert not os.path.exists(no_persist)
+        assert m7.persist_path is None
+
+
 def test_genselect_plugin():
     """Test genselect plugin module"""
     import optillm.plugins.genselect_plugin as plugin
@@ -392,7 +448,13 @@ if __name__ == "__main__":
         print("✅ Memory plugin structure test passed")
     except Exception as e:
         print(f"❌ Memory plugin structure test failed: {e}")
-    
+
+    try:
+        test_memory_plugin_persistence()
+        print("✅ Memory plugin persistence test passed")
+    except Exception as e:
+        print(f"❌ Memory plugin persistence test failed: {e}")
+
     try:
         test_genselect_plugin()
         print("✅ GenSelect plugin test passed")

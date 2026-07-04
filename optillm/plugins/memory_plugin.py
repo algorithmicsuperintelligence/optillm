@@ -1,24 +1,90 @@
+import json
+import logging
+import os
 import re
-from typing import Tuple, List
+import tempfile
+from typing import Optional, Tuple, List
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 SLUG = "memory"
 
+# Environment variable that opts a run in to file-backed memory. When it is set,
+# the Memory store loads any previously saved items on init and persists after
+# every add(); when it is unset the plugin behaves exactly as before (in-RAM,
+# reset per request).
+MEMORY_FILE_ENV = "OPTILLM_MEMORY_FILE"
+
+logger = logging.getLogger(__name__)
+
 class Memory:
-    def __init__(self, max_size: int = 100):
+    def __init__(self, max_size: int = 100, persist_path: Optional[str] = None):
         self.max_size = max_size
         self.items: List[str] = []
         self.vectorizer = TfidfVectorizer()
         self.vectors = None
         self.completion_tokens = 0
+        self.persist_path = persist_path
+        if self.persist_path:
+            self._load_from_file()
 
     def add(self, item: str):
         if len(self.items) >= self.max_size:
             self.items.pop(0)
         self.items.append(item)
         self.vectors = None  # Reset vectors to force recalculation
+        if self.persist_path:
+            self._save_to_file()
+
+    def _load_from_file(self):
+        """Load persisted items from ``persist_path`` (opt-in).
+
+        A missing file (first run) or a corrupt/unreadable one degrades
+        gracefully to an empty in-memory store, so persistence can never make a
+        request fail at startup.
+        """
+        try:
+            with open(self.persist_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            return  # nothing persisted yet
+        except (OSError, ValueError) as e:
+            logger.warning("Could not load memory from %s: %s", self.persist_path, e)
+            return
+
+        if not isinstance(data, list):
+            logger.warning(
+                "Ignoring memory file %s: expected a JSON list of strings",
+                self.persist_path,
+            )
+            return
+
+        # Keep only strings and honour max_size (most recent items win).
+        items = [x for x in data if isinstance(x, str)]
+        self.items = items[-self.max_size:]
+        self.vectors = None
+
+    def _save_to_file(self):
+        """Atomically persist the current items to ``persist_path`` (opt-in).
+
+        Writes to a temp file in the same directory and ``os.replace``s it into
+        place so a crash mid-write cannot corrupt an existing store. Any I/O
+        error is logged and swallowed rather than raised.
+        """
+        try:
+            directory = os.path.dirname(os.path.abspath(self.persist_path))
+            os.makedirs(directory, exist_ok=True)
+            fd, tmp_path = tempfile.mkstemp(dir=directory, suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    json.dump(self.items, f)
+                os.replace(tmp_path, self.persist_path)
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+        except OSError as e:
+            logger.warning("Could not save memory to %s: %s", self.persist_path, e)
 
     def get_relevant(self, query: str, n: int = 10) -> List[str]:
         if not self.items:
@@ -91,7 +157,10 @@ Example answers:
     return margins, response.usage.completion_tokens
 
 def run(system_prompt: str, initial_query: str, client, model: str) -> Tuple[str, int]:
-    memory = Memory()
+    # Opt-in file-backed memory: when OPTILLM_MEMORY_FILE is set, items persist
+    # across requests; when unset, behaviour is unchanged (fresh in-RAM store).
+    persist_path = os.environ.get(MEMORY_FILE_ENV) or None
+    memory = Memory(persist_path=persist_path)
     query, context = extract_query(initial_query)
     completion_tokens = 0
 
