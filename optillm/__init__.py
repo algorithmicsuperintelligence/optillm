@@ -1,5 +1,5 @@
 # Version information
-__version__ = "0.3.18"
+__version__ = "0.3.19"
 
 import os as _os
 

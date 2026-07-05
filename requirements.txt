@@ -5,7 +5,11 @@ z3-solver<=4.15.4.0
 aiohttp
 flask
 torch
-transformers>=5.0.0
+# Cap below 5.13: transformers 5.13.0 tightened AutoTokenizer.register() to require
+# a class, which breaks mlx-lm (it registers a tokenizer by string name). Lift the
+# cap once mlx-lm ships a transformers-5.13-compatible release. See mlx_lm
+# tokenizer_utils.register("NewlineTokenizer", ...).
+transformers>=5.0.0,<5.13.0
 azure.identity
 tiktoken
 scikit-learn
