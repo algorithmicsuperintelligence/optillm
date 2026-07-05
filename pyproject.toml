@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "optillm"
-version = "0.3.20"
+version = "0.3.21"
 description = "An optimizing inference proxy for LLMs."
 readme = "README.md"
 license = "Apache-2.0"
@@ -24,7 +24,9 @@ dependencies = [
     "aiohttp",
     "flask",
     "torch",
-    "transformers",
+    # Cap below 5.13: transformers 5.13.0 tightened AutoTokenizer.register() to
+    # require a class, which breaks mlx-lm (registers a tokenizer by string name).
+    "transformers>=5.0.0,<5.13.0",
     "azure-identity",
     "tiktoken",
     "scikit-learn",
@@ -44,11 +46,12 @@ dependencies = [
     "gradio<5.16.0",
     "spacy>=3.7.0",
     "cerebras_cloud_sdk",
-    "outlines[transformers]",
+    "outlines[transformers]>=1.2.3",
     "sentencepiece",
     "mcp",
     "adaptive-classifier",
     "datasets",
+    "math-verify",
     "PyYAML",
     "selenium",
     "webdriver-manager",
