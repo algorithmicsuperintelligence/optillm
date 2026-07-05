@@ -106,11 +106,14 @@ jobs:
         # Wait for server to be ready
         echo "Waiting for server to start..."
         sleep 15
-        
+
         # Test server health
         curl -s http://localhost:8000/health || echo "Server health check failed"
       env:
         OPTILLM_API_KEY: optillm
+        # Bound generation for the small test model, which does not reliably emit
+        # an EOS token and would otherwise ramble up to the 4096 default per call.
+        OPTILLM_MAX_TOKENS: "128"
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
     
     - name: Run integration tests (server required)
@@ -217,6 +220,9 @@ jobs:
         curl -s http://localhost:8000/health || echo "Server health check failed"
       env:
         OPTILLM_API_KEY: optillm
+        # Bound generation for the small test model, which does not reliably emit
+        # an EOS token and would otherwise ramble up to the 4096 default per call.
+        OPTILLM_MAX_TOKENS: "128"
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
     - name: Run conversation logging tests
