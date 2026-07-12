@@ -428,6 +428,104 @@ def test_no_relative_import_errors():
                 raise
 
 
+# ---------------------------------------------------------------------------
+# Router plugin: the classifier model must be loaded once and cached, not
+# reloaded on every request. These tests mock the heavy loaders so they need
+# no network or real weights.
+# ---------------------------------------------------------------------------
+import threading as _threading
+import contextlib as _contextlib
+from unittest import mock as _mock
+
+
+class _FakeRouterConfig:
+    hidden_size = 768
+
+
+def _install_router_loader_mocks(stack, load_counter):
+    """Patch router_plugin's heavy loaders; load_counter grows once per base-model load."""
+    from optillm.plugins import router_plugin
+
+    def fake_from_pretrained(*args, **kwargs):
+        load_counter.append(1)
+        base = _mock.MagicMock()
+        base.config = _FakeRouterConfig()
+        return base
+
+    stack.enter_context(_mock.patch.object(
+        router_plugin.AutoModel, "from_pretrained", side_effect=fake_from_pretrained))
+    stack.enter_context(_mock.patch.object(
+        router_plugin, "hf_hub_download", return_value="/tmp/fake.safetensors"))
+    stack.enter_context(_mock.patch.object(
+        router_plugin, "load_model", return_value=None))
+    stack.enter_context(_mock.patch.object(
+        router_plugin.AutoTokenizer, "from_pretrained", return_value=_mock.MagicMock()))
+    return router_plugin
+
+
+def test_router_plugin_caches_model():
+    """load_optillm_model() must load the base model once across repeated calls."""
+    from optillm.plugins import router_plugin
+    router_plugin._model_cache = None
+    loads = []
+    try:
+        with _contextlib.ExitStack() as stack:
+            _install_router_loader_mocks(stack, loads)
+            first = router_plugin.load_optillm_model()
+            for _ in range(5):
+                assert router_plugin.load_optillm_model() is first, \
+                    "load_optillm_model() must return the cached bundle"
+        assert len(loads) == 1, (
+            f"expected exactly 1 base-model load across 6 calls, got {len(loads)} "
+            "(model is being reloaded per request instead of cached)")
+    finally:
+        router_plugin._model_cache = None
+
+
+def test_router_plugin_cache_bundle_shape():
+    """The cached value is the (model, tokenizer, device) triple callers unpack."""
+    from optillm.plugins import router_plugin
+    router_plugin._model_cache = None
+    try:
+        with _contextlib.ExitStack() as stack:
+            _install_router_loader_mocks(stack, [])
+            bundle = router_plugin.load_optillm_model()
+        assert isinstance(bundle, tuple) and len(bundle) == 3, "expected a 3-tuple bundle"
+        model, tokenizer, device = bundle
+        assert isinstance(model, router_plugin.OptILMClassifier)
+        assert tokenizer is not None and device is not None
+    finally:
+        router_plugin._model_cache = None
+
+
+def test_router_plugin_concurrent_single_load():
+    """Concurrent first-time access must still load the model exactly once."""
+    from optillm.plugins import router_plugin
+    router_plugin._model_cache = None
+    loads = []
+    results = []
+    try:
+        with _contextlib.ExitStack() as stack:
+            _install_router_loader_mocks(stack, loads)
+            barrier = _threading.Barrier(8)
+
+            def worker():
+                barrier.wait()  # maximize contention on the first load
+                results.append(router_plugin.load_optillm_model())
+
+            threads = [_threading.Thread(target=worker) for _ in range(8)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+        assert len(loads) == 1, (
+            f"expected exactly 1 load under concurrency, got {len(loads)} "
+            "(the double-checked lock is not serializing the first load)")
+        assert all(r is results[0] for r in results), "threads saw different cached bundles"
+    finally:
+        router_plugin._model_cache = None
+
+
 if __name__ == "__main__":
     print("Running plugin tests...")
     
@@ -454,6 +552,24 @@ if __name__ == "__main__":
         print("✅ Memory plugin persistence test passed")
     except Exception as e:
         print(f"❌ Memory plugin persistence test failed: {e}")
+
+    try:
+        test_router_plugin_caches_model()
+        print("✅ Router plugin model caching test passed")
+    except Exception as e:
+        print(f"❌ Router plugin model caching test failed: {e}")
+
+    try:
+        test_router_plugin_cache_bundle_shape()
+        print("✅ Router plugin cache bundle shape test passed")
+    except Exception as e:
+        print(f"❌ Router plugin cache bundle shape test failed: {e}")
+
+    try:
+        test_router_plugin_concurrent_single_load()
+        print("✅ Router plugin concurrent single-load test passed")
+    except Exception as e:
+        print(f"❌ Router plugin concurrent single-load test failed: {e}")
 
     try:
         test_genselect_plugin()
