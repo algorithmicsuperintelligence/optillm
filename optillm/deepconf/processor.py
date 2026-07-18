@@ -108,7 +108,7 @@ class DeepConfProcessor:
             messages,
             return_tensors="pt",
             add_generation_prompt=True
-        ).to(self.model.device)
+        ).input_ids.to(self.model.device)
         
         # Initialize generation state
         kv_cache = DynamicCache()
