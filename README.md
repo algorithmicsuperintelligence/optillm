@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/optillm/"><img src="https://img.shields.io/pypi/v/optillm" alt="PyPI version"></a>
-  <a href="https://pepy.tech/projects/optillm"><img src="https://static.pepy.tech/personalized-badge/optillm?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads/month" alt="PyPI Downloads"></a>
+  <a href="https://pepy.tech/projects/optillm"><img src="https://static.pepy.tech/personalized-badge/optillm?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=downloads" alt="PyPI Downloads"></a>
   <a href="https://github.com/algorithmicsuperintelligence/optillm/blob/main/LICENSE"><img src="https://img.shields.io/github/license/algorithmicsuperintelligence/optillm" alt="License"></a>
 </p>
 
