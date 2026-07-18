@@ -243,7 +243,8 @@ class AutoThinkProcessor:
                 thinking_messages,
                 continue_final_message=True,
                 return_tensors="pt"
-            ).to(self.model.device)
+            ).input_ids
+            tokens.to(self.model.device)
             
             # Reset and update token history in steering hooks
             if self.steering_hooks:
