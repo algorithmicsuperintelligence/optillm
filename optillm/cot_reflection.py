@@ -1,7 +1,6 @@
 import re
 import logging
 import optillm
-from optillm import conversation_logger
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ def cot_reflection(system_prompt, initial_query, client, model: str, return_full
     thinking_match = re.search(r'<thinking>(.*?)</thinking>', full_response, re.DOTALL)
     output_match = re.search(r'<output>(.*?)(?:</output>|$)', full_response, re.DOTALL)
 
-    thinking = thinking_match.group(1).strip() if thinking_match else "No thinking process provided."
+    thinking_match.group(1).strip() if thinking_match else "No thinking process provided."
     output = output_match.group(1).strip() if output_match else full_response
 
     logger.info(f"Final output :\n{output}")

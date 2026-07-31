@@ -4,7 +4,6 @@ import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 import os
 import tempfile
-import json
 
 SLUG = "executecode"
 

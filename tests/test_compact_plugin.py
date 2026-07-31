@@ -1,7 +1,6 @@
 """Tests for compact_plugin."""
 
 import os
-import pytest
 from unittest.mock import MagicMock, patch
 from optillm.plugins.compact_plugin import (
     estimate_tokens,

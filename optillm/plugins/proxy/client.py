@@ -3,9 +3,7 @@ ProxyClient implementation for load balancing across multiple LLM providers.
 """
 import time
 import logging
-import random
-from typing import Dict, List, Any, Optional
-import concurrent.futures
+from typing import Dict, Optional
 import threading
 from openai import OpenAI, AzureOpenAI
 from optillm.plugins.proxy.routing import RouterFactory
@@ -184,7 +182,7 @@ class ProxyClient:
                 return self._system_message_support_cache[cache_key]
             
             try:
-                test_response = provider.client.chat.completions.create(
+                provider.client.chat.completions.create(
                     model=model,
                     messages=[
                         {"role": "system", "content": "test"},

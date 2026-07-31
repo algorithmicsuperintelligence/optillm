@@ -711,7 +711,7 @@ def evaluate_model(
     failures = len([r for r in detailed_results if "error" in r])
     if failures > 0:
         logger.warning(f"Approach {approach}: {failures}/{total_expected} examples failed due to errors")
-        logger.warning(f"Failed examples are counted as incorrect in accuracy calculation")
+        logger.warning("Failed examples are counted as incorrect in accuracy calculation")
     
     # Add category-specific metrics
     for category, cat_metrics in category_metrics.items():
@@ -825,7 +825,7 @@ def generate_report(all_metrics: Dict[str, Dict[str, float]], output_dir: str, i
             maj5_acc = all_metrics["maj@5"]["accuracy"] * 100
             genselect5_acc = all_metrics["genselect@5"]["accuracy"] * 100
             
-            report.append(f"\n**Key Metrics:**")
+            report.append("\n**Key Metrics:**")
             report.append(f"- **avg@5** (average of 5 responses): {avg5_acc:.2f}%")
             report.append(f"- **pass@5** (success if any correct): {pass5_acc:.2f}%")
             report.append(f"- **maj@5** (majority voting): {maj5_acc:.2f}%")
@@ -837,7 +837,7 @@ def generate_report(all_metrics: Dict[str, Dict[str, float]], output_dir: str, i
                 maj_improvement = ((maj5_acc - avg5_acc) / avg5_acc) * 100
                 genselect_improvement = ((genselect5_acc - avg5_acc) / avg5_acc) * 100
                 
-                report.append(f"\n**Improvements over avg@5 baseline:**")
+                report.append("\n**Improvements over avg@5 baseline:**")
                 report.append(f"- pass@5: {'+' if pass_improvement > 0 else ''}{pass_improvement:.1f}%")
                 report.append(f"- maj@5: {'+' if maj_improvement > 0 else ''}{maj_improvement:.1f}%")
                 report.append(f"- genselect@5: {'+' if genselect_improvement > 0 else ''}{genselect_improvement:.1f}%")
@@ -845,7 +845,7 @@ def generate_report(all_metrics: Dict[str, Dict[str, float]], output_dir: str, i
             # Show variance indicator
             if pass5_acc > avg5_acc:
                 variance_ratio = (pass5_acc - avg5_acc) / avg5_acc * 100
-                report.append(f"\n**Response Variance Indicator:**")
+                report.append("\n**Response Variance Indicator:**")
                 report.append(f"- Gap between pass@5 and avg@5: {variance_ratio:.1f}%")
                 report.append(f"- This indicates {'high' if variance_ratio > 50 else 'moderate' if variance_ratio > 20 else 'low'} variance in response quality")
     

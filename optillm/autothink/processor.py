@@ -9,7 +9,7 @@ import torch
 import random
 import logging
 from transformers import PreTrainedModel, PreTrainedTokenizer, DynamicCache
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Tuple
 
 from .classifier import ComplexityClassifier
 from .steering import SteeringVectorManager, install_steering_hooks, remove_steering_hooks

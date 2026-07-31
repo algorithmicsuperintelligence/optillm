@@ -11,18 +11,15 @@ designed to be challenging for frontier models.
 
 import argparse
 import json
-import os
 import logging
 import re
 import csv
-import time
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple
 from tqdm import tqdm
 import requests
-from urllib.parse import urlparse
 import httpx
 from openai import OpenAI
 
@@ -201,7 +198,7 @@ class SimpleQAEvaluator:
                         # Original SimpleQA dataset
                         try:
                             metadata = json.loads(row['metadata']) if row.get('metadata') else {}
-                        except:
+                        except Exception:
                             metadata = {}
                         question_id = i
                     

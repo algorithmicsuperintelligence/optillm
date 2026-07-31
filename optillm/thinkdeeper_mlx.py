@@ -4,7 +4,7 @@ Provides the same functionality as the PyTorch version but adapted for MLX frame
 """
 
 import random
-from typing import Tuple, Dict, Any, List
+from typing import Dict, Any, List
 import logging
 
 logger = logging.getLogger(__name__)

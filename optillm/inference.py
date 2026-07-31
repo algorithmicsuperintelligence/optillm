@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from collections import OrderedDict, defaultdict
 import torch.nn.functional as F
 import torch.nn as nn
-import math
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel
 from peft import PeftModel, PeftConfig
 import bitsandbytes as bnb
@@ -17,7 +16,6 @@ import time
 import threading
 import traceback
 import platform
-import sys
 import re
 
 from optillm.cot_decoding import cot_decode
@@ -1069,11 +1067,9 @@ class ModelManager:
                 # Check for flash attention availability
                 try:
                     import flash_attn
-                    has_flash_attn = True
                     logger.info("Flash Attention 2 is available")
                     model_kwargs["attn_implementation"] = "flash_attention_2"
                 except ImportError:
-                    has_flash_attn = False
                     logger.info("Flash Attention 2 is not installed - falling back to default attention")
                     
             elif 'mps' in device:
@@ -1155,7 +1151,7 @@ class LoRAManager:
     def validate_adapter(self, adapter_id: str) -> bool:
         """Validate if adapter exists and is compatible"""
         try:
-            config = PeftConfig.from_pretrained(
+            PeftConfig.from_pretrained(
                 adapter_id,
                 trust_remote_code=True,
                 token=os.getenv("HF_TOKEN")
@@ -1591,8 +1587,8 @@ class InferencePipeline:
         
         for i in range(0, len(formatted_prompts), self.optimal_batch_size):
             batch_prompts = formatted_prompts[i:i + self.optimal_batch_size]
-            batch_system = system_prompts[i:i + self.optimal_batch_size]
-            batch_user = user_prompts[i:i + self.optimal_batch_size]
+            system_prompts[i:i + self.optimal_batch_size]
+            user_prompts[i:i + self.optimal_batch_size]
             
             # Check cache first if enabled
             if self.model_config.enable_prompt_caching:

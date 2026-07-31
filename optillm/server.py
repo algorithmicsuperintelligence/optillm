@@ -3,7 +3,6 @@ import logging
 import os
 import secrets
 import time
-import traceback
 from pathlib import Path
 from flask import Flask, request, jsonify
 from cerebras.cloud.sdk import Cerebras
@@ -14,9 +13,7 @@ import importlib
 import glob
 import asyncio
 import re
-from concurrent.futures import ThreadPoolExecutor
-from typing import Tuple, Optional, Union, Dict, Any, List
-from importlib.metadata import version
+from typing import Tuple, Union, Dict, Any, List
 from dataclasses import fields
 
 # Import approach modules
@@ -1028,14 +1025,14 @@ def parse_args():
     for arg, env, type_, default, help_text, *extra in args_env:
         env_value = os.environ.get(env)
         if env_value is not None:
-            if type_ == bool:
+            if type_ is bool:
                 default = env_value.lower() in ('true', '1', 'yes')
             else:
                 default = type_(env_value)
         if extra and extra[0]:  # Check if there are choices for this argument
             parser.add_argument(arg, type=type_, default=default, help=help_text, choices=extra[0])
         else:
-            if type_ == bool:
+            if type_ is bool:
                 # For boolean flags, use store_true action
                 parser.add_argument(arg, action='store_true', default=default, help=help_text)
             else:
@@ -1149,7 +1146,6 @@ def main():
             logger.info(f"Processing batch of {len(batch_requests)} requests")
 
             # Check if we can use true batching (all requests compatible and using 'none' approach)
-            can_use_true_batching = True
             first_req = batch_requests[0]
 
             # Check compatibility across all requests
@@ -1158,7 +1154,6 @@ def main():
                     req_data['approaches'] != first_req['approaches'] or
                     req_data['operation'] != first_req['operation'] or
                     req_data['model'] != first_req['model']):
-                    can_use_true_batching = False
                     break
 
             # For now, implement sequential processing but with proper infrastructure

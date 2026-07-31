@@ -3,11 +3,9 @@ import threading
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoModel, AutoTokenizer, AutoConfig
+from transformers import AutoModel, AutoTokenizer
 from huggingface_hub import hf_hub_download
-from safetensors import safe_open
 from safetensors.torch import load_model
-from transformers import AutoTokenizer, AutoModel
 from optillm.mcts import chat_with_mcts
 from optillm.bon import best_of_n_sampling
 from optillm.moa import mixture_of_agents

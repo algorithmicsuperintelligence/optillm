@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from transformers import PreTrainedModel, PreTrainedTokenizer
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict
 import logging
 
 # Set up logging

@@ -1,12 +1,10 @@
-import os
 import json
 import argparse
 import asyncio
 from tqdm import tqdm
 from datasets import load_dataset
 from openai import AsyncOpenAI
-from typing import List, Dict, Any, Tuple
-import random
+from typing import List, Dict, Any
 
 # OptILM approaches remain the same as in original script
 APPROACHES = ["none", "mcts", "bon", "moa", "rto", "z3", "self_consistency", "pvg", "rstar", "cot_reflection", "plansearch", "leap", "re2"]

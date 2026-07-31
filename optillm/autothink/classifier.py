@@ -6,7 +6,7 @@ using the adaptive-classifier model.
 """
 
 import logging
-from typing import Dict, Any, Tuple, Optional, List, Union
+from typing import Tuple, List
 import os
 import sys
 
@@ -40,7 +40,6 @@ class ComplexityClassifier:
             except ImportError:
                 logger.info("Installing adaptive-classifier library...")
                 os.system(f"{sys.executable} -m pip install adaptive-classifier")
-                import adaptive_classifier
             
             # Import the AdaptiveClassifier class
             from adaptive_classifier import AdaptiveClassifier

@@ -1,7 +1,6 @@
 import re
 from typing import Tuple, List, Optional
 import requests
-import os
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from optillm import __version__, server_config

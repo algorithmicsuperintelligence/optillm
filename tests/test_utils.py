@@ -8,7 +8,6 @@ import sys
 import time
 import subprocess
 import platform
-from typing import Optional
 from openai import OpenAI
 
 # Standard test model for all tests - small and fast (~250M params)

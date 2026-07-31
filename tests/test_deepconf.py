@@ -151,7 +151,7 @@ def test_info_function():
         for key in required_keys:
             assert key in info, f"Missing key: {key}"
         
-        assert info["local_models_only"] == True
+        assert info["local_models_only"]
         assert "low" in info["variants"] and "high" in info["variants"]
         
         logger.info("✓ Info function tests passed")

@@ -78,7 +78,8 @@ def concurrent_map(
         Tuple[List[str], CBLog]: List of responses (in original order) and updated log object.
     """
     result = [None] * len(context_chunks)
-    wrapped_gen_function = lambda index, *args: (index, gen_function(*args))
+    def wrapped_gen_function(index, *args):
+        return (index, gen_function(*args))
     with ThreadPoolExecutor(max_workers=workers) as executor:
         future_to_idx = {}
         for idx, chunk in enumerate(context_chunks):

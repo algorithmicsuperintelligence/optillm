@@ -7,21 +7,16 @@ Tests parallel processing, hard problem solving, and logging functionality
 import sys
 import os
 import time
-import asyncio
 import unittest
 import logging
 import io
 from unittest.mock import Mock, patch
-from concurrent.futures import ThreadPoolExecutor
 
 # Add parent directory to path to import optillm modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from optillm.mars import multi_agent_reasoning_system
-from optillm.mars.mars import _run_mars_parallel
 from optillm.mars.agent import MARSAgent
-from optillm.mars.verifier import MARSVerifier
-from optillm.mars.workspace import MARSWorkspace
 
 
 class MockOpenAIClient:
@@ -35,7 +30,7 @@ class MockOpenAIClient:
 
     def chat_completions_create(self, **kwargs):
         """Mock completions.create with configurable delay"""
-        start_time = time.time()
+        time.time()
         time.sleep(self.response_delay)  # Simulate API call delay
         self.call_count += 1
         self.call_times.append(time.time())
@@ -516,7 +511,6 @@ class TestMARSParallel(unittest.TestCase):
 def test_mars_agent_temperatures():
     """Test that MARS uses different temperatures for agents"""
     from optillm.mars.mars import DEFAULT_CONFIG
-    from optillm.mars.agent import MARSAgent
 
     client = MockOpenAIClient()
     model = "mock-model"

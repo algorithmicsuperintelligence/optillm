@@ -1,13 +1,10 @@
 import math
 import random
 import logging
-from typing import List, Dict, Any, Tuple
+from typing import List, Tuple
 import re
 import asyncio
-import aiohttp
-from concurrent.futures import ThreadPoolExecutor
 import optillm
-from optillm import conversation_logger
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

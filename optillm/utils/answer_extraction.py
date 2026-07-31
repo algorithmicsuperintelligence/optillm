@@ -7,7 +7,7 @@ as the primary parser with fallback patterns for various mathematical answer for
 
 import re
 import logging
-from typing import Optional, Union, Any, Dict, List
+from typing import Optional, Any
 import math_verify
 
 logger = logging.getLogger(__name__)

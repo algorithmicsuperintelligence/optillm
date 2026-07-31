@@ -8,7 +8,7 @@ import os
 import asyncio
 import json
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch
 from pathlib import Path
 
 # Try to import pytest, but don't fail if it's not available
@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from optillm.plugins.mcp_plugin import (
     ServerConfig, MCPServer, MCPConfigManager, MCPServerManager,
     execute_tool, execute_tool_stdio, execute_tool_sse, execute_tool_websocket,
-    LoggingClientSession, SLUG
+    SLUG
 )
 
 
@@ -377,7 +377,7 @@ class TestGitHubMCPServer:
             if connected:
                 assert server.connected
                 assert len(server.tools) > 0 or len(server.resources) > 0 or len(server.prompts) > 0
-                print(f"GitHub MCP server connected successfully!")
+                print("GitHub MCP server connected successfully!")
                 print(f"Found: {len(server.tools)} tools, {len(server.resources)} resources, {len(server.prompts)} prompts")
 
                 # List some tools
@@ -452,7 +452,7 @@ class TestMockScenarios:
                 headers={"Authorization": "${TEST_TOKEN}"}
             )
 
-            server = MCPServer("test", config)
+            MCPServer("test", config)
 
             # Test the header expansion logic from connect_sse method
             expanded_headers = {}

@@ -14,7 +14,8 @@ for _hf_token_var in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACE_HUB_TOK
         del _os.environ[_hf_token_var]
 
 # Import from server module
-from .server import (
+from .server import (  # noqa: E402
+
     main,
     server_config,
     app,

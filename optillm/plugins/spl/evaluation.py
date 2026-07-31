@@ -4,7 +4,7 @@ Functions for evaluating strategies in the System Prompt Learning (SPL) plugin.
 
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Any
 
 from optillm.plugins.spl.strategy import Strategy
 from optillm.plugins.spl.utils import extract_thinking

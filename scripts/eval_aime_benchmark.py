@@ -5,9 +5,7 @@ import logging
 import re
 import time
 import math
-import numpy as np
-from typing import List, Dict, Tuple, Optional, Union, Counter
-from datetime import datetime
+from typing import List, Dict, Tuple, Optional, Union
 from openai import OpenAI
 from datasets import load_dataset
 from tqdm import tqdm
@@ -165,7 +163,6 @@ def analyze_thinking(response: str) -> Dict:
         result["thinking_tokens_text"] = thinking_text
         
         # Count thought transitions
-        position = 0
         for phrase in THOUGHT_TRANSITIONS:
             # Find all occurrences of each transition phrase
             for match in re.finditer(r'\b' + re.escape(phrase) + r'\b', thinking_text):
@@ -496,9 +493,9 @@ def analyze_results(results: List[Dict], n: int, analyze_thoughts: bool = False,
     successful_attempts = [r['first_correct_attempt'] for r in results if r['is_correct']]
     if successful_attempts:
         avg_attempts = sum(successful_attempts) / len(successful_attempts)
-        print(f"\nFor correct solutions:")
+        print("\nFor correct solutions:")
         print(f"Average attempts needed: {avg_attempts:.2f}")
-        print(f"Attempt distribution:")
+        print("Attempt distribution:")
         for i in range(1, n + 1):
             count = sum(1 for x in successful_attempts if x == i)
             print(f"  Attempt {i}: {count} problems")
@@ -564,7 +561,7 @@ def analyze_results(results: List[Dict], n: int, analyze_thoughts: bool = False,
         print(f"- Average thought transitions: {all_stats['avg_thought_transitions']:.2f}")
         print(f"- Median thought transitions: {all_stats['median_thought_transitions']}")
         print(f"- Percentage with <think> tags: {all_stats['has_think_tags_pct']:.2f}%")
-        print(f"- Transition phrase usage:")
+        print("- Transition phrase usage:")
         for phrase, count in all_stats['transition_usage'].items():
             print(f"  - {phrase}: {count} occurrences")
         
@@ -574,7 +571,7 @@ def analyze_results(results: List[Dict], n: int, analyze_thoughts: bool = False,
         print(f"- Average thought transitions: {correct_stats['avg_thought_transitions']:.2f}")
         print(f"- Median thought transitions: {correct_stats['median_thought_transitions']}")
         print(f"- Percentage with <think> tags: {correct_stats['has_think_tags_pct']:.2f}%")
-        print(f"- Transition phrase usage:")
+        print("- Transition phrase usage:")
         for phrase, count in correct_stats['transition_usage'].items():
             print(f"  - {phrase}: {count} occurrences")
         
@@ -584,7 +581,7 @@ def analyze_results(results: List[Dict], n: int, analyze_thoughts: bool = False,
         print(f"- Average thought transitions: {incorrect_stats['avg_thought_transitions']:.2f}")
         print(f"- Median thought transitions: {incorrect_stats['median_thought_transitions']}")
         print(f"- Percentage with <think> tags: {incorrect_stats['has_think_tags_pct']:.2f}%")
-        print(f"- Transition phrase usage:")
+        print("- Transition phrase usage:")
         for phrase, count in incorrect_stats['transition_usage'].items():
             print(f"  - {phrase}: {count} occurrences")
         
@@ -727,12 +724,12 @@ def analyze_results(results: List[Dict], n: int, analyze_thoughts: bool = False,
             print(f"- Average entropy std: {all_stats['entropy']['std']:.4f}")
             
             if all_stats['entropy']['quartiles']:
-                print(f"- Entropy by generation quartile:")
+                print("- Entropy by generation quartile:")
                 for i, q in enumerate(all_stats['entropy']['quartiles']):
                     print(f"  - Q{i+1}: {q:.4f}")
             
             if all_stats['transitions']:
-                print(f"- Entropy around thought transitions:")
+                print("- Entropy around thought transitions:")
                 for phrase, stats in all_stats['transitions'].items():
                     change = stats['entropy_change']
                     change_dir = "increases" if change > 0 else "decreases"
@@ -755,7 +752,7 @@ def analyze_results(results: List[Dict], n: int, analyze_thoughts: bool = False,
                 
                 # Compare entropy progression
                 if (correct_stats['entropy']['quartiles'] and incorrect_stats['entropy']['quartiles']):
-                    print(f"- Entropy progression through generation:")
+                    print("- Entropy progression through generation:")
                     
                     for i in range(min(len(correct_stats['entropy']['quartiles']), 
                                        len(incorrect_stats['entropy']['quartiles']))):
@@ -769,7 +766,7 @@ def analyze_results(results: List[Dict], n: int, analyze_thoughts: bool = False,
                 common_transitions = set(correct_stats['transitions'].keys()) & set(incorrect_stats['transitions'].keys())
                 
                 if common_transitions:
-                    print(f"- Entropy changes around thought transitions:")
+                    print("- Entropy changes around thought transitions:")
                     
                     for phrase in common_transitions:
                         c_stats = correct_stats['transitions'][phrase]
@@ -863,9 +860,9 @@ def main(model: str, n_attempts: int, year: int = 2024, analyze_thoughts: bool =
         predicted_answers = [attempt.get('predicted_answer') for attempt in attempts]
         print(f"   Predicted: {predicted_answers}")
         if is_correct:
-            print(f"   ✅ CORRECT!")
+            print("   ✅ CORRECT!")
         else:
-            print(f"   ❌ Incorrect")
+            print("   ❌ Incorrect")
 
         result = {
             "index": id,

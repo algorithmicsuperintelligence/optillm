@@ -10,8 +10,7 @@ import logging
 import random
 import json
 import datasets
-from typing import Dict, List, Any, Tuple, Optional, Union
-from collections import defaultdict
+from typing import Dict, List, Any, Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -540,7 +539,6 @@ class SteeringHook:
         if random.random() < 0.01:
             logger.debug(f"STEERING: Token history updated, now has {len(self.token_history)} tokens")
             
-    def update_context(self, new_tokens: str):
         """
         Update the context buffer with new tokens.
         

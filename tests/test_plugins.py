@@ -15,7 +15,7 @@ except ImportError:
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from optillm import plugin_approaches, load_plugins
+from optillm import plugin_approaches, load_plugins  # noqa: E402
 
 
 def test_plugin_module_imports():
@@ -309,8 +309,6 @@ def test_proxy_plugin_timeout_config():
 def test_proxy_plugin_timeout_handling():
     """Test that proxy plugin handles timeouts correctly"""
     from optillm.plugins.proxy.client import ProxyClient
-    from unittest.mock import Mock, patch
-    import concurrent.futures
 
     # Create config with short timeout
     config = {
@@ -433,7 +431,7 @@ def test_no_relative_import_errors():
 # reloaded on every request. These tests mock the heavy loaders so they need
 # no network or real weights.
 # ---------------------------------------------------------------------------
-import threading as _threading
+import threading as _threading  # noqa: E402
 import contextlib as _contextlib
 from unittest import mock as _mock
 

@@ -2,7 +2,6 @@ import logging
 import re
 from typing import List, Tuple
 import optillm
-from optillm import conversation_logger
 
 logger = logging.getLogger(__name__)
 

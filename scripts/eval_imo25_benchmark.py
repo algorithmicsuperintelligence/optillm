@@ -1,3 +1,4 @@
+from imo25_reference import IMO_2025_PROBLEMS, verify_answer_format, verify_key_insights
 """
 Evaluation script for IMO 2025 problems using OptiLLM approaches
 Designed to test MARS and other approaches on challenging proof-based problems
@@ -9,7 +10,7 @@ import os
 import logging
 import re
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict
 from datetime import datetime
 from openai import OpenAI
 from tqdm import tqdm
@@ -27,7 +28,6 @@ logger = logging.getLogger(__name__)
 client = OpenAI(api_key="optillm", base_url="http://localhost:8001/v1")
 
 # Import the actual IMO 2025 problems and reference solutions
-from imo25_reference import IMO_2025_PROBLEMS, verify_answer_format, verify_key_insights
 
 SYSTEM_PROMPT = '''You are solving IMO (International Mathematical Olympiad) problems - the most challenging mathematical competition problems for high school students.
 
@@ -640,7 +640,7 @@ def analyze_results(results: List[Dict], approach_name: str = None):
     print(f"Average reasoning tokens per problem: {avg_reasoning_tokens:.0f}")
 
     # Problem type breakdown
-    print(f"\nProblem Type Breakdown:")
+    print("\nProblem Type Breakdown:")
     type_stats = {}
     for result in results:
         prob_type = result['problem_data']['type']
@@ -657,7 +657,7 @@ def analyze_results(results: List[Dict], approach_name: str = None):
         print(f"  {prob_type}: {stats['correct']}/{stats['total']} ({accuracy:.1%}) - Avg score: {avg_score:.3f}")
 
     # Detailed problem results
-    print(f"\nDetailed Results:")
+    print("\nDetailed Results:")
     print("-" * 80)
     for result in results:
         prob_id = result['problem_data']['id']
@@ -669,7 +669,7 @@ def analyze_results(results: List[Dict], approach_name: str = None):
         print(f"Problem {prob_id} ({prob_type}): {status} {verdict} - {tokens:,} tokens")
 
     # Quality analysis summary
-    print(f"\nSolution Quality Analysis:")
+    print("\nSolution Quality Analysis:")
     print("-" * 40)
     quality_metrics = [
         "has_proof_structure", "uses_mathematical_notation", "has_logical_steps",

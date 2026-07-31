@@ -8,13 +8,10 @@ The TTD-DR approach treats research as a diffusion process with iterative refine
 through denoising and retrieval, generating comprehensive research reports.
 """
 
-import asyncio
-import json
 import re
-from typing import Tuple, List, Dict, Optional, Any
+from typing import Tuple, List, Dict, Any
 from datetime import datetime
-from collections import defaultdict
-from optillm.plugins.web_search_plugin import run as web_search_run, BrowserSessionManager
+from optillm.plugins.web_search_plugin import run as web_search_run
 from optillm.plugins.readurls_plugin import run as readurls_run
 from optillm.plugins.deep_research.session_state import get_session_manager, close_session
 import uuid
@@ -442,7 +439,7 @@ For more detailed information on specific aspects of {original_query}, additiona
             
             return queries[:5]  # Limit to 5 sub-queries
             
-        except Exception as e:
+        except Exception:
             # Fallback: use original query
             return [initial_query]
     
@@ -593,7 +590,7 @@ For more detailed information on specific aspects of {original_query}, additiona
             
             return is_complete, missing_aspects
             
-        except Exception as e:
+        except Exception:
             # Default to not complete on error
             return False, ["Error in evaluation"]
     
@@ -744,7 +741,7 @@ For more detailed information on specific aspects of {original_query}, additiona
             
             return gaps
             
-        except Exception as e:
+        except Exception:
             # Fallback: create basic gaps from the draft
             return [{
                 'id': '1',
@@ -795,7 +792,7 @@ For more detailed information on specific aspects of {original_query}, additiona
                     gap_context = f"[ADDRESSING GAP: {gap.get('section', 'Unknown')} - {gap.get('specific_need', 'General research')}]\n"
                     all_results.append(gap_context + enhanced_query)
                     
-            except Exception as e:
+            except Exception:
                 continue
         
         return "\n\n".join(all_results) if all_results else "No gap-targeted search results obtained"
@@ -930,7 +927,7 @@ For more detailed information on specific aspects of {original_query}, additiona
             
             return scores
             
-        except Exception as e:
+        except Exception:
             # Default scores
             return {
                 'completeness': 0.5,
@@ -1192,7 +1189,7 @@ For more detailed information on specific aspects of {original_query}, additiona
 
             # Validate citation usage before adding references
             citation_validation = validate_citation_usage(polished_report, len(self.citations))
-            print(f"📊 Citation Statistics:")
+            print("📊 Citation Statistics:")
             print(f"   - Used citations: {citation_validation['citations_used']}/{citation_validation['citations_total']}")
             print(f"   - Usage percentage: {citation_validation['usage_percentage']:.1f}%")
 
@@ -1217,7 +1214,7 @@ For more detailed information on specific aspects of {original_query}, additiona
             
             # Add TTD-DR metadata
             metadata = "\n---\n\n**TTD-DR Research Metadata:**\n"
-            metadata += f"- Algorithm: Test-Time Diffusion Deep Researcher\n"
+            metadata += "- Algorithm: Test-Time Diffusion Deep Researcher\n"
             metadata += f"- Denoising iterations: {len(self.draft_history) - 1}\n"
             metadata += f"- Total gaps addressed: {sum(len(gaps) for gaps in self.gap_analysis_history)}\n"
             metadata += f"- Total sources consulted: {len(self.citations)}\n"

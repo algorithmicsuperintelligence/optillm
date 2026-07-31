@@ -7,7 +7,7 @@ the most common response through simple voting.
 
 import re
 import logging
-from typing import Tuple, Dict, Any, List, Optional
+from typing import Tuple, Dict, Any
 from collections import Counter
 
 logger = logging.getLogger(__name__)

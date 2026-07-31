@@ -48,7 +48,7 @@ class HealthChecker:
         try:
             # Simple health check - try to get models
             # This creates a minimal request to verify the endpoint is responsive
-            response = provider.client.models.list()
+            provider.client.models.list()
             
             # Mark as healthy
             if not provider.is_healthy:

@@ -5,7 +5,6 @@ MARS Agent implementation with OpenRouter reasoning API
 import logging
 from typing import Dict, Any, Tuple
 from datetime import datetime
-import random
 from .prompts import (
     MATHEMATICAL_SYSTEM_PROMPT,
     AGENT_EXPLORATION_PROMPT,

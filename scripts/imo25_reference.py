@@ -4,7 +4,7 @@ Contains actual problems from the official contest and exact answers from Google
 """
 
 import re
-from typing import Dict, List, Set, Any, Optional
+from typing import Dict, Any, Optional
 
 # Actual IMO 2025 problems from the official contest
 IMO_2025_PROBLEMS = [

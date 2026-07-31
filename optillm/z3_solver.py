@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from z3 import *
+from z3 import *  # noqa: F403
 import sympy
 import io
 import re
@@ -10,7 +10,6 @@ import math
 import multiprocessing
 import traceback
 import optillm
-from optillm import conversation_logger
 
 class TimeoutException(Exception):
     pass
@@ -63,9 +62,6 @@ def prepare_execution_globals():
 
 def execute_code_in_process(code: str):
     import z3
-    import sympy
-    import math
-    import itertools
     from fractions import Fraction
 
     execution_globals = prepare_execution_globals()

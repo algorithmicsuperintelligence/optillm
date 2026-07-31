@@ -216,7 +216,7 @@ def split_into_granular_chunks(
                 new_last_chunk = new_sentences[end] + new_last_chunk
                 end -= 1
                 flag = True
-            if flag == False:
+            if not flag:
                 break
         if start < end:
             # If there is any unallocated part, split it by punctuation or space and then allocate it

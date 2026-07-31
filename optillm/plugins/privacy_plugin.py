@@ -1,6 +1,6 @@
 import spacy
 from presidio_analyzer import AnalyzerEngine
-from presidio_anonymizer import AnonymizerEngine, DeanonymizeEngine, OperatorConfig
+from presidio_anonymizer import AnonymizerEngine, OperatorConfig
 from presidio_anonymizer.operators import Operator, OperatorType
 
 from typing import Dict, Tuple, Optional

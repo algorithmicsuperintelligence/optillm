@@ -40,7 +40,6 @@ class RoundRobinRouter(Router):
         logger.debug(f"Round-robin: Starting selection, index={self.index}, providers={[p.name for p in providers]}")
         
         # Find next available provider in round-robin fashion
-        start_index = self.index
         attempts = 0
         while attempts < len(self.all_providers):
             # Get provider at current index from all providers

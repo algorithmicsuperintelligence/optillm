@@ -4,9 +4,9 @@ Main implementation of the System Prompt Learning (SPL) plugin.
 
 import time
 import logging
-from typing import Tuple, Dict, List, Optional, Any
+from typing import Tuple
 
-from .strategy import Strategy, StrategyDatabase
+from .strategy import StrategyDatabase
 from .generation import (
     classify_problem,
     generate_strategy,
@@ -109,7 +109,7 @@ def run_spl(system_prompt: str, initial_query: str, client, model: str, request_
         logger.info(f"Merged {merged_count} similar strategies")
         
         # 4.2 Limit strategies per problem type (applies storage limit, not inference limit)
-        limited_count = db.limit_strategies_per_type(max_per_type=MAX_STRATEGIES_PER_TYPE)
+        db.limit_strategies_per_type(max_per_type=MAX_STRATEGIES_PER_TYPE)
         
         # 4.3 Prune low-performing strategies
         pruned_count = db.prune_strategies()
@@ -133,7 +133,7 @@ def run_spl(system_prompt: str, initial_query: str, client, model: str, request_
         else:
             # Strategies exist but don't meet the minimum success rate
             logger.info(f"Strategies exist for problem type '{problem_type}' but none meet the minimum success rate threshold of {MIN_SUCCESS_RATE_FOR_INFERENCE:.2f}.")
-            logger.info(f"Enable learning mode with 'spl_learning=True' to improve strategies.")
+            logger.info("Enable learning mode with 'spl_learning=True' to improve strategies.")
         
         # Use the original system prompt without augmentation
         logger.info("Running without strategy augmentation - using base system prompt only.")

@@ -127,7 +127,7 @@ def extract_schema_from_response_format(response_format: Dict[str, Any]) -> Opti
                     return json.dumps(schema_data["schema"])
                 return json.dumps(schema_data)
                 
-        logger.warning(f"Could not extract valid schema from response_format")
+        logger.warning("Could not extract valid schema from response_format")
         return None
     except Exception as e:
         logger.error(f"Error extracting schema from response_format: {str(e)}")

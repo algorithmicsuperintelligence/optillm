@@ -17,7 +17,7 @@ import threading
 import queue
 import time
 import logging
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Dict, List, Any, Optional
 from concurrent.futures import Future
 from dataclasses import dataclass
 

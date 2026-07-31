@@ -12,7 +12,7 @@ import time
 import re
 import pandas as pd
 import requests
-from typing import List, Dict, Optional
+from typing import List, Dict
 from datetime import datetime
 from openai import OpenAI
 from tqdm import tqdm

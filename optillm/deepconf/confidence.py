@@ -10,7 +10,7 @@ Implements various confidence metrics based on token-level probabilities:
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, Optional
 import logging
 
 logger = logging.getLogger(__name__)

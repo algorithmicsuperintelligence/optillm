@@ -1,7 +1,7 @@
 import torch
 import random
 from transformers import PreTrainedModel, PreTrainedTokenizer, DynamicCache
-from typing import Tuple, Dict, Any, List
+from typing import Dict, Any, List
 import logging
 
 logger = logging.getLogger(__name__)

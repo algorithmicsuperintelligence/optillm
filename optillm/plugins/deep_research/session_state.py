@@ -89,7 +89,7 @@ class ResearchSessionState:
             if session_id in self._sessions:
                 try:
                     self._sessions[session_id].close()
-                except:
+                except Exception:
                     pass
                 del self._sessions[session_id]
             del self._session_timestamps[session_id]

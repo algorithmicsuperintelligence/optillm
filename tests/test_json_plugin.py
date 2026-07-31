@@ -1,17 +1,15 @@
 """Test the JSON plugin functionality"""
 
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import json
 import sys
 import os
-from typing import Dict, Any
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import test utilities
-from test_utils import setup_test_env, get_test_client, TEST_MODEL
 
 # We'll use real dependencies since the outlines version has been updated
 

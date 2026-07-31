@@ -7,19 +7,17 @@ Tests end-to-end integration with approaches that generate thinking
 import sys
 import os
 import unittest
-import re
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import test utilities
 from test_utils import (
-    setup_test_env, get_test_client, is_mlx_available, 
-    TEST_MODEL, get_simple_test_messages, get_thinking_test_messages
+    setup_test_env, is_mlx_available, 
+    TEST_MODEL, get_simple_test_messages
 )
 
 # Import the thinkdeeper functions for testing
-from optillm.thinkdeeper import thinkdeeper_decode
 try:
     from optillm.thinkdeeper_mlx import thinkdeeper_decode_mlx
     MLX_THINKDEEPER_AVAILABLE = True
@@ -205,7 +203,6 @@ class TestAPIResponseStructure(unittest.TestCase):
     
     def test_chat_completion_response_structure(self):
         """Test that chat completion responses have proper structure"""
-        from unittest.mock import Mock
         from optillm.inference import ChatCompletion, ChatCompletionUsage
         
         # Create mock response structure

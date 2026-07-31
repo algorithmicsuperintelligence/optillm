@@ -1,3 +1,4 @@
+import os
 """
 Proxy Plugin for OptiLLM - Load balancing and failover for LLM providers
 
@@ -6,7 +7,7 @@ with health monitoring, failover, and support for wrapping other approaches.
 """
 import logging
 import threading
-from typing import Tuple, Optional, Dict
+from typing import Tuple, Dict
 from optillm.plugins.proxy.config import ProxyConfig
 from optillm.plugins.proxy.client import ProxyClient
 from optillm.plugins.proxy.approach_handler import ApproachHandler
@@ -15,7 +16,6 @@ SLUG = "proxy"
 logger = logging.getLogger(__name__)
 
 # Configure logging based on environment
-import os
 log_level = os.environ.get('OPTILLM_LOG_LEVEL', 'INFO')
 logging.basicConfig(level=getattr(logging, log_level))
 
@@ -33,7 +33,7 @@ def _test_system_message_support(proxy_client, model: str) -> bool:
     """
     try:
         # Try a minimal system message request
-        test_response = proxy_client.chat.completions.create(
+        proxy_client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", "content": "test"},

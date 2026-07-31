@@ -4,7 +4,7 @@ Functions for generating strategies in the System Prompt Learning (SPL) plugin.
 
 import uuid
 import logging
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Tuple, Optional, List
 
 from optillm.plugins.spl.strategy import Strategy, StrategyDatabase
 from optillm.plugins.spl.utils import extract_thinking

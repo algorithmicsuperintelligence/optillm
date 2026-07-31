@@ -6,8 +6,6 @@ Test API compatibility with OpenAI format
 import pytest
 import os
 import sys
-from openai import OpenAI
-import json
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -232,7 +230,7 @@ if __name__ == "__main__":
             print(f"❌ FAILED: {e}")
             failed += 1
     
-    print(f"\n=== Test Summary ===")
+    print("\n=== Test Summary ===")
     print(f"Passed: {passed}")
     print(f"Failed: {failed}")
     print(f"Total: {passed + failed}")

@@ -9,12 +9,8 @@ import os
 import json
 import logging
 import asyncio
-import sys
-import time
-import re
 import shutil
-import subprocess
-from typing import Dict, List, Any, Optional, Tuple, Set, Union, Callable
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 import traceback
@@ -23,7 +19,6 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
 from mcp.client.websocket import websocket_client
-import mcp.types as types
 from mcp.shared.exceptions import McpError
 
 # Configure logging
@@ -61,14 +56,14 @@ def log_mcp_message(direction: str, method: str, params: Any = None, result: Any
         try:
             params_str = json.dumps(params, indent=2)
             message_parts.append(f"Params: {params_str}")
-        except:
+        except (TypeError, ValueError):
             message_parts.append(f"Params: {params}")
     
     if result:
         try:
             result_str = json.dumps(result, indent=2)
             message_parts.append(f"Result: {result_str}")
-        except:
+        except (TypeError, ValueError):
             message_parts.append(f"Result: {result}")
     
     if error:
@@ -453,13 +448,13 @@ class MCPServer:
             asyncio.create_task(log_stdout())
 
             # Wait a bit for the server to start up
-            logger.debug(f"Waiting for server to start up...")
+            logger.debug("Waiting for server to start up...")
             await asyncio.sleep(2)
 
             # Use the MCP client with proper context management
             logger.debug(f"Establishing MCP client connection to {self.server_name}")
             async with stdio_client(server_params) as (read_stream, write_stream):
-                logger.debug(f"Connection established, creating session")
+                logger.debug("Connection established, creating session")
                 # Use our logging session instead of the regular one
                 async with LoggingClientSession(read_stream, write_stream) as session:
                     return await self.connect_stdio(session)
@@ -680,7 +675,7 @@ async def execute_tool(server_name: str, tool_name: str, arguments: Dict[str, An
         return {"error": f"Server {server_name} not found in configuration"}
 
     # Log the tool call in detail
-    logger.debug(f"Tool call details:")
+    logger.debug("Tool call details:")
     logger.debug(f"  Server: {server_name}")
     logger.debug(f"  Tool: {tool_name}")
     logger.debug(f"  Arguments: {json.dumps(arguments, indent=2)}")

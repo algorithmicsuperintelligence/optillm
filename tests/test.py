@@ -13,7 +13,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from test_utils import TEST_MODEL
 
-from optillm.litellm_wrapper import LiteLLMWrapper
 from optillm.mcts import chat_with_mcts
 from optillm.bon import best_of_n_sampling
 from optillm.moa import mixture_of_agents
@@ -27,7 +26,7 @@ from optillm.plansearch import plansearch
 from optillm.leap import leap
 from optillm.reread import re2_approach
 from optillm.mars import multi_agent_reasoning_system
-from optillm.cepo.cepo import cepo, CepoConfig, init_cepo_config
+from optillm.cepo.cepo import cepo, init_cepo_config
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

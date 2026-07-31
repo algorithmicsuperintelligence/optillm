@@ -10,7 +10,6 @@ import time
 import logging
 import io
 import unittest
-from unittest.mock import Mock
 
 # Add parent directory to path to import optillm modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -29,7 +28,7 @@ class MockOpenAIClient:
 
     def chat_completions_create(self, **kwargs):
         """Mock completions.create with realistic IMO25 responses"""
-        start_time = time.time()
+        time.time()
         time.sleep(self.response_delay)
         self.call_count += 1
         self.call_times.append(time.time())
@@ -63,10 +62,10 @@ class MockOpenAIClient:
         # Generate appropriate responses based on problem content and call type
         if "verifying" in problem_content.lower():
             # Verification response
-            content = f"VERIFICATION: This solution appears CORRECT. The analysis is mathematically sound and the final answer is properly justified. Confidence: 8/10."
+            content = "VERIFICATION: This solution appears CORRECT. The analysis is mathematically sound and the final answer is properly justified. Confidence: 8/10."
         elif "improving" in problem_content.lower():
             # Improvement response
-            content = f"IMPROVEMENT: The original approach is good but can be enhanced. Here's the improved version with stronger reasoning..."
+            content = "IMPROVEMENT: The original approach is good but can be enhanced. Here's the improved version with stronger reasoning..."
         elif "bonza" in problem_content.lower():
             # IMO25 Problem 3 - functional equation
             responses = [
@@ -152,7 +151,7 @@ class TestMARSIMO25(unittest.TestCase):
 
 Determine the smallest real constant c such that f(n)≤cn for all bonza functions f and all positive integers n."""
 
-        print(f"\n🧮 Testing MARS on IMO25 Problem 3 (Expected answer: c = 4)...")
+        print("\n🧮 Testing MARS on IMO25 Problem 3 (Expected answer: c = 4)...")
 
         client = MockOpenAIClient(response_delay=0.05, reasoning_tokens=3000)
 
@@ -207,11 +206,11 @@ Determine the smallest real constant c such that f(n)≤cn for all bonza functio
         response_lines = response.split('\n')
         key_lines = [line for line in response_lines if any(keyword in line.lower() for keyword in ['constant', 'c =', 'answer', '= 4', 'therefore'])]
         if key_lines:
-            print(f"  🔑 Key response lines:")
+            print("  🔑 Key response lines:")
             for line in key_lines[:5]:
                 print(f"    {line.strip()}")
 
-        print(f"✅ IMO25 Problem 3 test completed")
+        print("✅ IMO25 Problem 3 test completed")
 
     def test_imo25_problem4_number_theory(self):
         """Test MARS on IMO25 Problem 4 - Number Theory (Expected: 6J·12^K formula)"""
@@ -221,7 +220,7 @@ The infinite sequence a_1,a_2,… consists of positive integers, each of which h
 
 Determine all possible values of a_1."""
 
-        print(f"\n🔢 Testing MARS on IMO25 Problem 4 (Expected: 6J·12^K formula)...")
+        print("\n🔢 Testing MARS on IMO25 Problem 4 (Expected: 6J·12^K formula)...")
 
         client = MockOpenAIClient(response_delay=0.05, reasoning_tokens=3000)
 
@@ -251,11 +250,11 @@ Determine all possible values of a_1."""
         print(f"  🎯 Contains '12^K': {has_formula_12K}")
         print(f"  🎯 Contains 'gcd': {has_gcd_condition}")
 
-        print(f"✅ IMO25 Problem 4 test completed")
+        print("✅ IMO25 Problem 4 test completed")
 
     def test_answer_extraction_analysis(self):
         """Test answer extraction specifically with controlled responses"""
-        print(f"\n🔍 Testing answer extraction with controlled responses...")
+        print("\n🔍 Testing answer extraction with controlled responses...")
 
         class ControlledMockClient(MockOpenAIClient):
             def __init__(self):
@@ -299,7 +298,7 @@ Determine all possible values of a_1."""
             for i, log in enumerate(voting_logs[:3]):
                 print(f"    Vote {i+1}: {log}")
 
-        print(f"✅ Answer extraction analysis completed")
+        print("✅ Answer extraction analysis completed")
 
 
 def run_imo25_tests():

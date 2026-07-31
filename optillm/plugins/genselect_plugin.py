@@ -11,8 +11,7 @@ answer frequencies, GenSelect evaluates the entire response quality.
 """
 
 import logging
-from typing import Tuple, Dict, Any, List, Optional
-import json
+from typing import Tuple, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +248,7 @@ def run(
         # Get the selected candidate
         selected_candidate = candidates[selected_index]
         
-        logger.info(f"GenSelect Summary:")
+        logger.info("GenSelect Summary:")
         logger.info(f"  - Generated {len(candidates)} candidates")
         logger.info(f"  - Selected candidate {selected_index + 1}")
         logger.info(f"  - Total tokens used: {total_tokens}")

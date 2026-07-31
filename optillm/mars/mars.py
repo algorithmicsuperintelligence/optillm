@@ -5,16 +5,13 @@ MARS: Multi-Agent Reasoning System main orchestration with parallel execution
 import asyncio
 import logging
 from typing import Dict, Any, List, Tuple
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 import time
-import re
 from collections import Counter
-import optillm
 from optillm import conversation_logger
 from optillm.utils.answer_extraction import extract_answer
 
-from .workspace import MARSWorkspace, AgentSolution
+from .workspace import MARSWorkspace
 from .agent import MARSAgent
 from .verifier import MARSVerifier
 from .aggregator import MARSAggregator
@@ -117,7 +114,7 @@ async def _run_mars_parallel(
     config = LIGHTWEIGHT_CONFIG.copy() if use_lightweight else DEFAULT_CONFIG.copy()
 
     if use_lightweight:
-        logger.info(f"⚡ CONFIG: Using LIGHTWEIGHT MARS config for coding (fast mode)")
+        logger.info("⚡ CONFIG: Using LIGHTWEIGHT MARS config for coding (fast mode)")
 
     # Override with mars_config if provided
     if request_config and 'mars_config' in request_config:
@@ -133,7 +130,7 @@ async def _run_mars_parallel(
         logger.info(f"⚙️  CONFIG: Using default max_tokens: {config['max_tokens']}")
 
     # Log complete configuration
-    logger.info(f"⚙️  CONFIG: Full MARS configuration:")
+    logger.info("⚙️  CONFIG: Full MARS configuration:")
     for key, value in config.items():
         logger.info(f"⚙️  CONFIG:   {key}: {value}")
 
@@ -181,7 +178,7 @@ async def _run_mars_parallel(
             # Phase 2a: RSA-inspired Aggregation (if enabled)
             if config.get('enable_aggregation', True):
                 phase_start = time.time()
-                logger.info(f"📊 PHASE 2a: RSA-inspired Solution Aggregation")
+                logger.info("📊 PHASE 2a: RSA-inspired Solution Aggregation")
                 aggregator = MARSAggregator(client, model, config)
                 aggregation_tokens, aggregation_summary = await aggregator.run_aggregation_loops(
                     workspace, request_id, executor
@@ -193,7 +190,7 @@ async def _run_mars_parallel(
             # Phase 2b: Cross-Agent Strategy Sharing (if enabled)
             if config.get('enable_strategy_network', True):
                 phase_start = time.time()
-                logger.info(f"📊 PHASE 2b: Cross-Agent Strategy Network")
+                logger.info("📊 PHASE 2b: Cross-Agent Strategy Network")
                 strategy_network = StrategyNetwork(client, model, config)
 
                 # Extract reasoning strategies from agent solutions
@@ -204,7 +201,7 @@ async def _run_mars_parallel(
 
                     # Share strategies across agents and generate enhanced solutions
                     if config.get('cross_agent_enhancement', True) and extracted_strategies:
-                        strategy_sharing_summary = await strategy_network.share_strategies_across_agents(
+                        await strategy_network.share_strategies_across_agents(
                             workspace, extracted_strategies, request_id, executor
                         )
 
@@ -270,14 +267,14 @@ async def _run_mars_parallel(
         total_time = time.time() - start_time
         summary = workspace.get_summary()
 
-        logger.info(f"🏁 MARS COMPLETION SUMMARY:")
+        logger.info("🏁 MARS COMPLETION SUMMARY:")
         logger.info(f"🏁   Total execution time: {total_time:.2f}s")
         logger.info(f"🏁   Solutions: {summary['verified_solutions']}/{summary['total_solutions']} verified")
         logger.info(f"🏁   Total reasoning tokens: {total_reasoning_tokens}")
         logger.info(f"🏁   Final solution length: {len(final_solution)} characters")
 
         # Log phase timing breakdown
-        logger.info(f"🏁 TIMING BREAKDOWN:")
+        logger.info("🏁 TIMING BREAKDOWN:")
         for phase, duration in phase_times.items():
             percentage = (duration / total_time) * 100
             logger.info(f"🏁   {phase}: {duration:.2f}s ({percentage:.1f}%)")
@@ -306,7 +303,7 @@ async def _run_mars_parallel(
                 logger.warning(f"⚠️  Falling back to raw synthesis output ({len(final_solution)} chars)")
                 return final_solution, total_reasoning_tokens
         else:
-            logger.info(f"📝 ANSWER EXTRACTION: Thinking tags disabled, returning raw synthesis")
+            logger.info("📝 ANSWER EXTRACTION: Thinking tags disabled, returning raw synthesis")
             return final_solution, total_reasoning_tokens
 
     except Exception as e:
@@ -319,7 +316,7 @@ async def _run_mars_parallel(
             fallback_agent = MARSAgent(0, client, model, config)
             fallback_solution, fallback_tokens = fallback_agent.generate_solution(initial_query, request_id)
             return fallback_solution.solution, fallback_tokens
-        except:
+        except Exception:
             return error_response, 0
 
 async def _run_exploration_phase_parallel(
@@ -456,7 +453,7 @@ def _synthesize_final_solution(
         answer_counts = Counter([ans for ans, _ in numerical_answers])
         most_common_answers = answer_counts.most_common()
 
-        logger.info(f"🗳️  VOTING: Answer distribution:")
+        logger.info("🗳️  VOTING: Answer distribution:")
         for answer, count in most_common_answers:
             percentage = (count / len(numerical_answers)) * 100
             agents_with_answer = [sol.agent_id for ans, sol in numerical_answers if ans == answer]
@@ -482,7 +479,7 @@ def _synthesize_final_solution(
         logger.info(f"🗳️  VOTING: Insufficient numerical answers for voting ({len(numerical_answers)} < 2)")
 
     # If no consensus, fall back to synthesis with answer preservation
-    logger.info(f"🤔 VOTING FALLBACK: No numerical consensus found, falling back to answer-preserving synthesis")
+    logger.info("🤔 VOTING FALLBACK: No numerical consensus found, falling back to answer-preserving synthesis")
 
     # Log extracted answers for synthesis guidance
     all_extracted = getattr(workspace, '_extracted_answers_info', [])
@@ -491,7 +488,7 @@ def _synthesize_final_solution(
         for answer, solution, method in all_extracted:
             logger.info(f"🔍 EXTRACTED ANSWERS SUMMARY:   '{answer}' from Agent {solution.agent_id} via {method}")
     else:
-        logger.info(f"🔍 EXTRACTED ANSWERS SUMMARY: No extracted answers found")
+        logger.info("🔍 EXTRACTED ANSWERS SUMMARY: No extracted answers found")
 
     synthesis_data = workspace.get_synthesis_input()
 
@@ -590,7 +587,7 @@ def _synthesize_final_solution(
                 reasoning_tokens = getattr(response.usage, 'reasoning_tokens', 0)
 
         # ENHANCED LOGGING: Log synthesis details
-        logger.info(f"🤝 SYNTHESIS SUCCESS: Synthesis completed")
+        logger.info("🤝 SYNTHESIS SUCCESS: Synthesis completed")
         logger.info(f"🤝 SYNTHESIS SUCCESS:   Output solution length: {len(final_solution)} characters")
         logger.info(f"🤝 SYNTHESIS SUCCESS:   Reasoning tokens: {reasoning_tokens}")
         logger.info(f"🤝 SYNTHESIS SUCCESS:   Total tokens: {total_tokens}")
@@ -607,7 +604,7 @@ def _synthesize_final_solution(
             logger.info(f"🚑 SYNTHESIS FALLBACK: Solution length: {len(fallback_solution.solution):,} chars, score: {fallback_solution.verification_score:.2f}")
             return fallback_solution.solution, 0
 
-        logger.error(f"🚨 SYNTHESIS ERROR: No solutions available for fallback")
+        logger.error("🚨 SYNTHESIS ERROR: No solutions available for fallback")
         return "Unable to generate solution due to synthesis failure.", 0
 
 def _log_solution_overview(workspace: MARSWorkspace):
@@ -619,7 +616,7 @@ def _log_solution_overview(workspace: MARSWorkspace):
     avg_chars = total_chars / len(workspace.solutions) if workspace.solutions else 0
     verified_solutions = workspace.get_verified_solutions()
 
-    logger.info(f"📋 SOLUTION OVERVIEW: Statistics:")
+    logger.info("📋 SOLUTION OVERVIEW: Statistics:")
     logger.info(f"📋 SOLUTION OVERVIEW:   Total solutions: {len(workspace.solutions)}")
     logger.info(f"📋 SOLUTION OVERVIEW:   Verified solutions: {len(verified_solutions)}")
     logger.info(f"📋 SOLUTION OVERVIEW:   Total characters: {total_chars:,}")

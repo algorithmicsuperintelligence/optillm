@@ -3,7 +3,6 @@ import logging
 import numpy as np
 import networkx as nx
 from typing import List, Dict
-import optillm
 from optillm import conversation_logger
 
 logger = logging.getLogger(__name__)
@@ -94,7 +93,7 @@ class MCTS:
         if not self.root:
             self.root = MCTSNode(initial_state)
             self.graph.add_node(id(self.root))
-            self.node_labels[id(self.root)] = f"Root\nVisits: 0\nValue: 0.00"
+            self.node_labels[id(self.root)] = "Root\nVisits: 0\nValue: 0.00"
             logger.debug("Created root node")
         
         for i in range(num_simulations):

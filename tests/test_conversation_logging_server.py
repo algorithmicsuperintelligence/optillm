@@ -23,7 +23,7 @@ if _tests_dir not in sys.path:
 if _project_dir not in sys.path:
     sys.path.insert(0, _project_dir)
 
-from test_utils import TEST_MODEL, setup_test_env, start_test_server, stop_test_server
+from test_utils import TEST_MODEL, setup_test_env, stop_test_server
 
 
 class TestConversationLoggingWithServer(unittest.TestCase):
@@ -452,10 +452,8 @@ class TestConversationLoggingWithServer(unittest.TestCase):
         entries = self._get_new_log_entries()
         
         # Should have at least some entry (success or partial)
-        found_relevant_entry = False
         for entry in entries:
             if "error logging scenarios" in str(entry.get("client_request", {})):
-                found_relevant_entry = True
                 break
         
         # Even if no specific entry found, logging system should be working
@@ -574,7 +572,7 @@ class TestConversationLoggingPerformanceWithServer(unittest.TestCase):
         # Should be reasonably fast (under 10 seconds for small model)
         self.assertLess(avg_time, 10.0, f"Average response time too slow: {avg_time:.2f}s")
         
-        print(f"\n📊 Server Performance with Logging:")
+        print("\n📊 Server Performance with Logging:")
         print(f"   Average response time: {avg_time:.3f}s")
         print(f"   Response times: {[f'{t:.3f}s' for t in times]}")
 

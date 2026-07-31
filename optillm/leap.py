@@ -3,7 +3,6 @@ import re
 from typing import List, Tuple
 import json
 import optillm
-from optillm import conversation_logger
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

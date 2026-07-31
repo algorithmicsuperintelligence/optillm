@@ -4,10 +4,10 @@ MARS Verification system implementing 5-pass verification threshold with paralle
 
 import asyncio
 import logging
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
-from .workspace import MARSWorkspace, AgentSolution, VerificationResult
+from .workspace import MARSWorkspace, AgentSolution
 from .agent import MARSAgent
 
 logger = logging.getLogger(__name__)

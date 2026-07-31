@@ -3,7 +3,7 @@ import json
 import os
 import logging
 import re
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 from datasets import load_dataset
 from tqdm import tqdm
 from openai import OpenAI
@@ -109,7 +109,7 @@ def numerically_equal(str1: str, str2: str) -> bool:
     """Compare if two numeric strings represent the same value."""
     try:
         return abs(float(str1) - float(str2)) < 1e-10
-    except:
+    except Exception:
         return False
     
 def normalize_fraction(fraction_str: str) -> str:
@@ -602,7 +602,7 @@ def normalize_answer(answer: str) -> str:
         result = normalize_algebraic_expression(answer)
         logger.debug(f"Normalized as algebraic expression: {repr(result)}")
         return result
-    except:
+    except Exception:
         logger.debug("Failed to normalize as algebraic expression")
         pass
     

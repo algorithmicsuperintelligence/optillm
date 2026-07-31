@@ -1,9 +1,8 @@
-import os
 import time
 import litellm
 from litellm import completion
 from litellm.utils import get_valid_models
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 
 # Configure litellm to drop unsupported parameters
 litellm.drop_params = True

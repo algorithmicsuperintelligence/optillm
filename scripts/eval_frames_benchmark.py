@@ -1,7 +1,6 @@
 import argparse
 import json
 import os
-import time
 from typing import List, Dict
 
 from openai import OpenAI

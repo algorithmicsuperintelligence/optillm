@@ -1,7 +1,6 @@
 import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
-from typing import List, Tuple, Dict, Optional
-import numpy as np
+from typing import List, Tuple, Dict
 
 def get_device():
     if torch.backends.mps.is_available():

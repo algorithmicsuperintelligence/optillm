@@ -5,7 +5,7 @@ import importlib
 import importlib.util
 import logging
 import inspect
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,6 @@ class ApproachHandler:
         """Discover available plugins dynamically"""
         try:
             import optillm
-            import os
             import glob
             
             # Get plugin directories

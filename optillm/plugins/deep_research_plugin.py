@@ -29,7 +29,6 @@ class DeepResearchClientWrapper:
     def _detect_client_type(self):
         """Detect the type of client based on class name"""
         class_name = self.client.__class__.__name__
-        module_name = self.client.__class__.__module__
         
         # Check for OpenAI-compatible clients (OpenAI, Cerebras, AzureOpenAI)
         if 'OpenAI' in class_name or 'Cerebras' in class_name:

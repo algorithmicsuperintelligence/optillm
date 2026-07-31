@@ -8,7 +8,7 @@ task-intrinsic reasoning structures.
 import json
 import logging
 import re
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 from .reasoning_modules import get_all_modules, get_module_descriptions
 
 logger = logging.getLogger(__name__)
@@ -295,7 +295,7 @@ Valid JSON reasoning structure:"""
                 logger.debug(f"Strategy {i} failed: {e}")
                 continue
         
-        logger.warning(f"All JSON parsing strategies failed. Using fallback structure.")
+        logger.warning("All JSON parsing strategies failed. Using fallback structure.")
         logger.debug(f"Raw response that failed to parse: {response_text[:500]}...")
         return fallback_structure
     
@@ -347,7 +347,7 @@ Valid JSON reasoning structure:"""
                 json_str = match.group(1).strip()
                 try:
                     return json.loads(json_str)
-                except:
+                except (json.JSONDecodeError, ValueError):
                     continue
         
         raise ValueError("No valid JSON found in code blocks")

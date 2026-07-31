@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import sys
 sys.path.append('..')
-from optillm.conversation_logger import ConversationLogger, ConversationEntry
+from optillm.conversation_logger import ConversationLogger
 
 
 class TestConversationLogger(unittest.TestCase):
@@ -189,7 +189,7 @@ class TestConversationLogger(unittest.TestCase):
         
         # Test enabled logger stats with active conversations
         request_id1 = self.logger_enabled.start_conversation({}, "test", "model")
-        request_id2 = self.logger_enabled.start_conversation({}, "test", "model")
+        self.logger_enabled.start_conversation({}, "test", "model")
         
         stats = self.logger_enabled.get_stats()
         

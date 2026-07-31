@@ -10,11 +10,9 @@ Implements the online mode algorithm with:
 
 import torch
 import logging
-import random
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 from transformers import PreTrainedModel, PreTrainedTokenizer, DynamicCache
 from collections import Counter, defaultdict
-import numpy as np
 
 from .confidence import ConfidenceCalculator, ConfidenceThresholdCalibrator
 
@@ -125,7 +123,7 @@ class DeepConfProcessor:
                 kv_cache = outputs.past_key_values
             
             # Calculate confidence for current token
-            token_confidence = self.confidence_calculator.add_token_confidence(logits)
+            self.confidence_calculator.add_token_confidence(logits)
             
             # Check for early termination (only after minimum trace length)
             if (use_early_termination and 

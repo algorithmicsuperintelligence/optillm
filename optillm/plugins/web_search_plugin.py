@@ -1,6 +1,5 @@
 import re
 import time
-import json
 import random
 from typing import Tuple, List, Dict, Optional
 from selenium import webdriver
@@ -71,7 +70,7 @@ class BrowserSessionManager:
                 if self._searcher:
                     try:
                         self._searcher.close()
-                    except:
+                    except Exception:
                         pass  # Ignore errors during cleanup
                 self._searcher = None
                 
@@ -170,18 +169,18 @@ class GoogleSearcher:
             try:
                 self.driver.find_element(By.CSS_SELECTOR, "iframe[src*='recaptcha']")
                 return True
-            except:
+            except Exception:
                 pass
             
             # Check for CAPTCHA challenge div
             try:
                 self.driver.find_element(By.ID, "captcha")
                 return True
-            except:
+            except Exception:
                 pass
             
             return False
-        except:
+        except Exception:
             return False
     
     def wait_for_captcha_resolution(self, max_wait: int = 300) -> bool:
@@ -247,7 +246,7 @@ class GoogleSearcher:
                 accept_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'I agree') or contains(text(), 'Agree')]")
                 accept_button.click()
                 time.sleep(1)
-            except:
+            except Exception:
                 pass  # No consent form
             
             # Find search box and enter query
@@ -260,7 +259,7 @@ class GoogleSearcher:
                             EC.presence_of_element_located(selector)
                         )
                         break
-                    except:
+                    except Exception:
                         continue
                 
                 if search_box:
@@ -285,7 +284,7 @@ class GoogleSearcher:
                             return []
                 else:
                     raise Exception("Could not find search box")
-            except:
+            except Exception:
                 # Fallback to direct URL navigation
                 print("Using direct URL navigation...")
                 search_url = f"https://www.google.com/search?q={quote_plus(query)}&num={num_results}"
@@ -312,7 +311,7 @@ class GoogleSearcher:
                             wait.until(
                                 EC.presence_of_element_located((By.CSS_SELECTOR, "div.g"))
                             )
-                        except:
+                        except Exception:
                             print("No results found after CAPTCHA resolution")
                             return []
                     else:
@@ -352,7 +351,7 @@ class GoogleSearcher:
                         WebDriverWait(self.driver, 10).until(
                             lambda driver: driver.find_elements(By.CSS_SELECTOR, "div.g")
                         )
-                    except:
+                    except Exception:
                         print("Still no results after CAPTCHA resolution")
                         return []
                 else:
@@ -384,7 +383,7 @@ class GoogleSearcher:
                         link = elem.find_element(By.CSS_SELECTOR, "a[href]")
                         if h3 and link:
                             search_results.append(elem)
-                    except:
+                    except Exception:
                         continue
                 
                 print(f"Filtered to {len(search_results)} valid result elements")
@@ -426,9 +425,9 @@ class GoogleSearcher:
                                     if snippet_elem and snippet_elem.text:
                                         snippet = snippet_elem.text
                                         break
-                                except:
+                                except Exception:
                                     pass
-                        except:
+                        except Exception:
                             pass
                         
                         # Add result
@@ -444,7 +443,7 @@ class GoogleSearcher:
                         print(f"Failed to parse result {i+1}")
                         continue
                         
-                except Exception as e:
+                except Exception:
                     # Skip problematic results
                     continue
             

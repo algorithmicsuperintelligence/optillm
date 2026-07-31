@@ -6,12 +6,10 @@ import optillm
 import time
 import math_verify
 
-from optillm import conversation_logger
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Literal, Any, Optional
-from cerebras.cloud.sdk import BadRequestError as CerebrasBadRequestError
 from openai import BadRequestError as OpenAIBadRequestError
 from openai import InternalServerError as OpenAIInternalServerError
 
@@ -325,7 +323,7 @@ def llm_call_reason_effort_fallback(
             if len(reasoning_effort_levels) == 1 and bre.message.startswith("Error code: 400 - {'error': {'message': 'think value"):
                 logger.info(f"The think level {effort} was not supported by the model; Disabling thinking")
                 cepo_config.use_reasoning = False
-        except (OpenAIBadRequestError, OpenAIInternalServerError) as e:
+        except (OpenAIBadRequestError, OpenAIInternalServerError):
             # After 2 retries at this reasoning effort level it failed with error 400/500, lower level
             logger.debug(f"400/500 persisted after retries at reasoning effort {effort}; degrading effort")
             if logger.getEffectiveLevel() == logging.DEBUG:
@@ -491,9 +489,9 @@ def generate_completion(system_prompt: str, task: str, client: Any, model: str, 
         messages.append({"role": "assistant", "content": response})
 
         plans.append(response)
-        cb_log[f"messages_planning_fallback_used"] = messages
+        cb_log["messages_planning_fallback_used"] = messages
         if cepo_config.print_output:
-            print(f"\nCePO: No plans generated successfully. Taking the fallback.\n")
+            print("\nCePO: No plans generated successfully. Taking the fallback.\n")
 
     # Step 3 - Review and consolidate plans
     plans_message = ""
@@ -575,7 +573,7 @@ def generate_completion(system_prompt: str, task: str, client: Any, model: str, 
 
     cb_log["messages"] = messages
     if cepo_config.print_output:
-        print(f"\nCePO: Answer generated for one bestofn_n attempt.")
+        print("\nCePO: Answer generated for one bestofn_n attempt.")
 
     return final_output, completion_tokens, cb_log
 
@@ -692,7 +690,7 @@ def generate_n_completions(system_prompt: str, initial_query: str, client: Any, 
             cb_log[f"completion_{i}_completion_tokens"] = tokens_i
 
     if cepo_config.print_output or logger.getEffectiveLevel() == logging.DEBUG:
-        logger.debug(f"\nCePO: All Answers generated!")
+        logger.debug("\nCePO: All Answers generated!")
 
     completions = [c if isinstance(c, str) else "" for c in completions]
     return completions, completion_tokens, cb_log
@@ -882,7 +880,7 @@ def extract_answer_mathverify(response_str, last_n_chars=100):
     try:
         float(response_str)
         return [float(response_str)]
-    except:
+    except Exception:
         response_str = response_str.split("</think>", 1)[1] if "</think>" in response_str else response_str
         if last_n_chars is not None:
             response_str = response_str[-last_n_chars:]

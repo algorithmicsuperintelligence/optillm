@@ -8,11 +8,9 @@ Tests verify that SSL certificate verification can be configured via:
 """
 
 import unittest
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 import sys
 import os
-import tempfile
-import httpx
 
 # Add parent directory to path to import optillm modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -109,7 +107,7 @@ class TestHTTPClientSSLConfiguration(unittest.TestCase):
 
         # Create client
         with patch('httpx.Client') as mock_httpx_client, \
-             patch('optillm.server.OpenAI') as mock_openai:
+             patch('optillm.server.OpenAI'):
             get_config()
             # Verify httpx.Client was called with verify=False
             mock_httpx_client.assert_called_once_with(verify=False)
@@ -125,7 +123,7 @@ class TestHTTPClientSSLConfiguration(unittest.TestCase):
 
         # Create client
         with patch('httpx.Client') as mock_httpx_client, \
-             patch('optillm.server.OpenAI') as mock_openai:
+             patch('optillm.server.OpenAI'):
             get_config()
             # Verify httpx.Client was called with verify=True
             mock_httpx_client.assert_called_once_with(verify=True)
@@ -142,7 +140,7 @@ class TestHTTPClientSSLConfiguration(unittest.TestCase):
 
         # Create client
         with patch('httpx.Client') as mock_httpx_client, \
-             patch('optillm.server.OpenAI') as mock_openai:
+             patch('optillm.server.OpenAI'):
             get_config()
             # Verify httpx.Client was called with custom cert path
             mock_httpx_client.assert_called_once_with(verify=test_cert_path)
@@ -162,7 +160,7 @@ class TestHTTPClientSSLConfiguration(unittest.TestCase):
 
         mock_http_client_instance = MagicMock()
 
-        with patch('httpx.Client', return_value=mock_http_client_instance) as mock_httpx_client, \
+        with patch('httpx.Client', return_value=mock_http_client_instance), \
              patch('optillm.server.OpenAI') as mock_openai:
             get_config()
 
@@ -187,7 +185,7 @@ class TestHTTPClientSSLConfiguration(unittest.TestCase):
 
         mock_http_client_instance = MagicMock()
 
-        with patch('httpx.Client', return_value=mock_http_client_instance) as mock_httpx_client, \
+        with patch('httpx.Client', return_value=mock_http_client_instance), \
              patch('optillm.server.Cerebras') as mock_cerebras:
             get_config()
 
@@ -211,7 +209,7 @@ class TestHTTPClientSSLConfiguration(unittest.TestCase):
 
         mock_http_client_instance = MagicMock()
 
-        with patch('httpx.Client', return_value=mock_http_client_instance) as mock_httpx_client, \
+        with patch('httpx.Client', return_value=mock_http_client_instance), \
              patch('optillm.server.AzureOpenAI') as mock_azure:
             get_config()
 
@@ -329,8 +327,8 @@ class TestSSLWarnings(unittest.TestCase):
         server_config['ssl_verify'] = False
         server_config['ssl_cert_path'] = ''
 
-        with patch('httpx.Client') as mock_httpx_client, \
-             patch('optillm.server.OpenAI') as mock_openai, \
+        with patch('httpx.Client'), \
+             patch('optillm.server.OpenAI'), \
              patch('optillm.server.logger.warning') as mock_logger_warning:
             get_config()
 
@@ -354,8 +352,8 @@ class TestSSLWarnings(unittest.TestCase):
         server_config['ssl_verify'] = True
         server_config['ssl_cert_path'] = test_cert_path
 
-        with patch('httpx.Client') as mock_httpx_client, \
-             patch('optillm.server.OpenAI') as mock_openai, \
+        with patch('httpx.Client'), \
+             patch('optillm.server.OpenAI'), \
              patch('optillm.server.logger.info') as mock_logger_info:
             get_config()
 

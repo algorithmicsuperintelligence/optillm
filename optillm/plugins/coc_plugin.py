@@ -18,12 +18,8 @@ Key safety improvements:
 
 import re
 import logging
-from typing import Tuple, Dict, Any, List
+from typing import Tuple, Any, List
 import ast
-import traceback
-import math
-import importlib
-import json
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 import os
@@ -222,7 +218,7 @@ else:
             # Clean up temporary file
             try:
                 os.unlink(tmp_name)
-            except:
+            except Exception:
                 pass
             
     except Exception as e:
@@ -274,7 +270,7 @@ def simulate_execution(code: str, error: str, client, model: str) -> Tuple[Any, 
         # Try to convert to appropriate type
         try:
             answer = ast.literal_eval(result)
-        except:
+        except Exception:
             answer = result
         logger.info(f"Simulation successful. Result: {answer}")
         return answer, response.usage.completion_tokens

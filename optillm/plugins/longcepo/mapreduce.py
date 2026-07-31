@@ -14,7 +14,8 @@ from .chunking import (
     get_prompt_length,
 )
 
-format_chunk_list = lambda chunk_list: [
+def format_chunk_list(chunk_list):
+    return [
     f"Information of Chunk {index}:\n{doc}\n" for index, doc in enumerate(chunk_list)
 ]
 

@@ -3,9 +3,8 @@ Utility functions for the System Prompt Learning (SPL) plugin.
 """
 
 import re
-import uuid
 import logging
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Tuple, Optional, List, Any
 
 from optillm.plugins.spl.prompts import STRATEGY_APPLICATION_PROMPT
 

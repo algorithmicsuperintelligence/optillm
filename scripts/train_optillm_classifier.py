@@ -2,7 +2,6 @@ import argparse
 import torch
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from transformers import AutoTokenizer, AutoModel
-from transformers import PreTrainedModel, PretrainedConfig, AutoConfig
 from datasets import load_dataset
 from sklearn.model_selection import KFold
 from tqdm import tqdm
@@ -11,7 +10,6 @@ import torch.nn as nn
 from safetensors.torch import save_model, load_model
 from collections import Counter
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-import numpy as np
 
 # Constants
 APPROACHES = ["none", "mcts", "bon", "moa", "rto", "z3", "self_consistency", "pvg", "rstar", "cot_reflection", "plansearch", "leap", "re2"]
@@ -139,7 +137,7 @@ def train(model, train_dataloader, val_dataloader, optimizer, scheduler, num_epo
         for batch in tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{num_epochs}"):
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
-            approaches = batch['approaches'].to(device)
+            batch['approaches'].to(device)
             ranks = batch['ranks'].to(device)
             tokens = batch['tokens'].to(device)
 
@@ -202,7 +200,7 @@ def validate(model, val_dataloader):
         for batch in val_dataloader:
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
-            approaches = batch['approaches'].to(device)
+            batch['approaches'].to(device)
             ranks = batch['ranks'].to(device)
             tokens = batch['tokens'].to(device)
 

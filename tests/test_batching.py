@@ -11,21 +11,16 @@ This test suite validates that:
 
 import unittest
 import time
-import json
 import os
-import subprocess
-import tempfile
-from typing import List, Dict, Any
-import threading
 import concurrent.futures
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # Import the modules we're testing
 from optillm.batching import RequestBatcher, BatchingError
 from optillm.inference import InferencePipeline, MLXInferencePipeline, MLXModelConfig, MLX_AVAILABLE
 
 # Import test utilities
-from test_utils import TEST_MODEL, TEST_MODEL_MLX
+from test_utils import TEST_MODEL_MLX
 
 
 class TestRequestBatcher(unittest.TestCase):
@@ -180,7 +175,7 @@ class TestMLXBatching(unittest.TestCase):
             from optillm.inference import MLXInferencePipeline
             # This would fail if the model isn't available, but we can test the interface
             self.assertTrue(hasattr(MLXInferencePipeline, 'process_batch'))
-        except Exception as e:
+        except Exception:
             # Expected if model isn't downloaded
             pass
     
@@ -208,7 +203,7 @@ class TestMLXBatching(unittest.TestCase):
     @unittest.skipIf(not MLX_AVAILABLE, "MLX not available")
     def test_mlx_batch_generation(self):
         """Test MLX batch processing with actual generation"""
-        print(f"\n🧪 Testing MLX batch generation...")
+        print("\n🧪 Testing MLX batch generation...")
         
         # Create the pipeline 
         pipeline = MLXInferencePipeline(self.model_config, self.cache_manager)
@@ -248,7 +243,6 @@ class TestPyTorchBatching(unittest.TestCase):
     def test_pytorch_batch_method_exists(self):
         """Test that PyTorch InferencePipeline has process_batch method"""
         # The method should exist even if we can't test it fully
-        from optillm.inference import InferencePipeline
         self.assertTrue(hasattr(InferencePipeline, 'process_batch'))
     
     @unittest.skipIf(not os.getenv("OPTILLM_API_KEY"), "Requires local inference")
@@ -339,7 +333,6 @@ class TestIntegration(unittest.TestCase):
     def test_cli_arguments(self):
         """Test that CLI arguments are properly parsed"""
         # Test parsing batch arguments
-        import argparse
         from optillm import parse_args
         
         # Mock sys.argv for testing
@@ -452,7 +445,6 @@ class TestGenerationConfigDefaults(unittest.TestCase):
 
     def test_resolve_eos_prefers_generation_config(self):
         from types import SimpleNamespace
-        from optillm.inference import InferencePipeline
 
         # tokenizer EOS (<|end_of_text|>=1) differs from the chat end token
         # (<|im_end|>=49154); both must be honoured, generation_config first.
@@ -465,7 +457,6 @@ class TestGenerationConfigDefaults(unittest.TestCase):
 
     def test_resolve_eos_dedupes_list(self):
         from types import SimpleNamespace
-        from optillm.inference import InferencePipeline
 
         fake = SimpleNamespace(
             current_model=SimpleNamespace(generation_config=SimpleNamespace(eos_token_id=[100, 200])),
@@ -475,7 +466,6 @@ class TestGenerationConfigDefaults(unittest.TestCase):
 
     def test_resolve_eos_falls_back_to_tokenizer(self):
         from types import SimpleNamespace
-        from optillm.inference import InferencePipeline
 
         fake = SimpleNamespace(
             current_model=SimpleNamespace(generation_config=SimpleNamespace(eos_token_id=None)),
