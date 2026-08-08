@@ -307,6 +307,22 @@ LiteLLM completion() model= gemini-1.5-flash-002; provider = gemini
 the same OpenAI API compatible chat completions endpoint. This should allow you to integrate it into any existing tools or frameworks easily. If the LLM you want to use
 doesn't have an OpenAI API compatible endpoint (like Google or Anthropic) you can use [LiteLLM proxy server](https://docs.litellm.ai/docs/proxy/quick_start) that supports most LLMs.
 
+### Anthropic-compatible Messages API
+
+OptiLLM also exposes an Anthropic-compatible API front end for tools that expect the Claude Messages API, such as Claude Code:
+
+```bash
+export ANTHROPIC_BASE_URL="http://localhost:8000"
+export ANTHROPIC_API_KEY="optillm"
+```
+
+Supported compatibility endpoints:
+
+- `POST /v1/messages`
+- `POST /v1/messages/count_tokens`
+
+The Anthropic front end translates requests into OptiLLM's existing OpenAI-compatible execution path, so text-only requests can still use approach prefixes such as `moa-gpt-4o-mini` or the `optillm_approach` request field. Requests that include Anthropic tools bypass optimization approaches and use direct proxy behavior to preserve Claude Code's structured `tool_use` and `tool_result` blocks.
+
 The following sequence diagram illustrates how the request and responses go through optillm.
 
 ![Sequance diagram showing optillm in use](https://raw.githubusercontent.com/algorithmicsuperintelligence/optillm/main/optillm-sequence-diagram.png)

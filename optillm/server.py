@@ -36,6 +36,13 @@ from optillm.cepo.cepo import cepo, CepoConfig, init_cepo_config
 from optillm.mars import multi_agent_reasoning_system
 from optillm.batching import RequestBatcher, BatchingError
 from optillm.conversation_logger import ConversationLogger
+from optillm.anthropic import (
+    anthropic_request_to_openai,
+    approximate_count_tokens,
+    generate_anthropic_stream,
+    openai_response_to_anthropic,
+    text_response_to_anthropic,
+)
 import optillm.conversation_logger
 
 # Setup logging
@@ -686,6 +693,94 @@ def extract_optillm_approach(content):
         return content, approach
     return content, None
 
+def _get_request_bearer_token():
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header.split("Bearer ", 1)[1].strip()
+
+    return ""
+
+def _get_client_for_request():
+    base_url = server_config['base_url']
+    default_client, api_key = get_config()
+    request_key = _get_request_bearer_token()
+
+    if request_key and request_key.startswith("sk-"):
+        if base_url:
+            return OpenAI(api_key=request_key, base_url=base_url)
+        return OpenAI(api_key=request_key)
+
+    return default_client
+
+def _anthropic_request_config(openai_data):
+    explicit_keys = {'stream', 'messages', 'model', 'n', 'optillm_approach'}
+    request_config = {k: v for k, v in openai_data.items() if k not in explicit_keys}
+    request_config['stream'] = False
+    request_config['n'] = 1
+    return request_config
+
+def _execute_anthropic_request(openai_data, has_tools):
+    model = openai_data.get('model', server_config['model'])
+    stream = openai_data.get('stream', False)
+    request_config = _anthropic_request_config(openai_data)
+    client = _get_client_for_request()
+
+    optillm_approach = openai_data.get('optillm_approach', server_config['approach'])
+
+    if has_tools:
+        if optillm_approach not in ("auto", "none"):
+            logger.info("Bypassing requested OptiLLM approach for Anthropic tool-use request")
+        result = none_approach(
+            client=client,
+            model=model,
+            original_messages=openai_data.get('messages', []),
+            **request_config
+        )
+        return openai_response_to_anthropic(result, model), stream
+
+    if optillm_approach != "auto":
+        model = f"{optillm_approach}-{model}"
+
+    operation, approaches, actual_model = parse_combined_approach(model, known_approaches, plugin_approaches)
+
+    if operation == 'SINGLE' and approaches[0] == 'none':
+        result = none_approach(
+            client=client,
+            model=actual_model,
+            original_messages=openai_data.get('messages', []),
+            **request_config
+        )
+        return openai_response_to_anthropic(result, actual_model), stream
+
+    system_prompt, initial_query, message_optillm_approach = parse_conversation(openai_data.get('messages', []))
+    if message_optillm_approach:
+        operation, approaches, actual_model = parse_combined_approach(
+            f"{message_optillm_approach}-{actual_model}",
+            known_approaches,
+            plugin_approaches
+        )
+
+    response, completion_tokens = execute_n_times(
+        1,
+        approaches,
+        operation,
+        system_prompt,
+        initial_query,
+        client,
+        actual_model,
+        request_config,
+    )
+
+    if operation == 'SINGLE' and isinstance(response, dict) and 'choices' in response:
+        return openai_response_to_anthropic(response, actual_model), stream
+
+    return text_response_to_anthropic(
+        response,
+        actual_model,
+        completion_tokens=completion_tokens,
+        input_tokens=approximate_count_tokens({"messages": openai_data.get("messages", [])}),
+    ), stream
+
 # Optional API key configuration to secure the proxy
 @app.before_request
 def check_api_key():
@@ -694,10 +789,15 @@ def check_api_key():
             return
 
         auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({"error": "Invalid Authorization header. Expected format: 'Authorization: Bearer YOUR_API_KEY'"}), 401
+        x_api_key = request.headers.get('x-api-key')
+        client_key = None
+        if auth_header and auth_header.startswith('Bearer '):
+            client_key = auth_header.split('Bearer ', 1)[1].strip()
+        elif x_api_key:
+            client_key = x_api_key.strip()
+        else:
+            return jsonify({"error": "Invalid API key. Expected 'Authorization: Bearer YOUR_API_KEY' or 'x-api-key: YOUR_API_KEY'"}), 401
 
-        client_key = auth_header.split('Bearer ', 1)[1].strip()
         if not secrets.compare_digest(client_key, server_config['optillm_api_key']):
             return jsonify({"error": "Invalid API key"}), 401
 
@@ -951,6 +1051,37 @@ def proxy():
         if request_id:
             logger.info(f'Request {request_id}: Completed')
         return jsonify(response_data), 200
+
+@app.route('/v1/messages', methods=['POST'])
+def anthropic_messages():
+    logger.info('Received request to /v1/messages')
+    data = request.get_json() or {}
+
+    try:
+        openai_data = anthropic_request_to_openai(data)
+        has_tools = bool(data.get('tools'))
+        anthropic_response, stream = _execute_anthropic_request(openai_data, has_tools)
+
+        if stream:
+            return Response(generate_anthropic_stream(anthropic_response), content_type='text/event-stream')
+        return jsonify(anthropic_response), 200
+    except Exception as e:
+        logger.error(f"Error processing Anthropic messages request: {str(e)}")
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            logger.exception("Debug Anthropic request exception")
+        return jsonify({
+            "type": "error",
+            "error": {
+                "type": "api_error",
+                "message": str(e),
+            },
+        }), 500
+
+@app.route('/v1/messages/count_tokens', methods=['POST'])
+def anthropic_count_tokens():
+    logger.info('Received request to /v1/messages/count_tokens')
+    data = request.get_json() or {}
+    return jsonify({"input_tokens": approximate_count_tokens(data)}), 200
 
 @app.route('/v1/models', methods=['GET'])
 def proxy_models():
