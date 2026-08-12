@@ -95,7 +95,8 @@ def get_config():
         API_KEY = os.environ.get("MINIMAX_API_KEY")
         base_url = server_config['base_url']
         if base_url == "":
-            base_url = "https://api.minimax.io/v1"
+            region = os.environ.get("MINIMAX_API_REGION", "global").lower()
+            base_url = "https://api.minimaxi.com/v1" if region == "cn" else "https://api.minimax.io/v1"
         default_client = OpenAI(api_key=API_KEY, base_url=base_url, http_client=http_client)
         logger.info(f"Created MiniMax client with base_url: {base_url}")
     elif os.environ.get("OPENAI_API_KEY"):

@@ -84,6 +84,19 @@ class TestMiniMaxProviderDetection(unittest.TestCase):
             call_kwargs = mock_openai.call_args[1]
             assert call_kwargs['base_url'] == 'https://api.minimax.io/v1'
 
+    @patch.dict(os.environ, {'MINIMAX_API_KEY': 'test-minimax-key', 'MINIMAX_API_REGION': 'cn'})
+    def test_minimax_china_base_url(self):
+        """Test MiniMax provider selects the China endpoint explicitly."""
+        from optillm.server import get_config
+
+        server_config['ssl_verify'] = True
+        server_config['ssl_cert_path'] = ''
+        server_config['base_url'] = ''
+
+        with patch('httpx.Client'), patch('optillm.server.OpenAI') as mock_openai:
+            get_config()
+            assert mock_openai.call_args[1]['base_url'] == 'https://api.minimaxi.com/v1'
+
     @patch.dict(os.environ, {'MINIMAX_API_KEY': 'test-minimax-key'})
     def test_minimax_with_custom_base_url(self):
         """Test MiniMax provider with custom base_url."""
