@@ -32,7 +32,7 @@ dependencies = [
     "scikit-learn",
     "litellm",
     "google-cloud-aiplatform",
-    "requests",
+    "requests>=2.32.2",
     "beautifulsoup4",
     "lxml",
     "presidio_analyzer",
