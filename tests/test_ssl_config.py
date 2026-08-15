@@ -234,7 +234,7 @@ class TestPluginSSLConfiguration(unittest.TestCase):
         server_config.clear()
         server_config.update(self.original_config)
 
-    @patch('optillm.plugins.readurls_plugin.requests.get')
+    @patch('optillm.plugins.readurls_plugin.requests.Session')
     def test_readurls_plugin_ssl_verify_disabled(self, mock_requests_get):
         """Test readurls plugin respects SSL verification disabled."""
         from optillm.plugins.readurls_plugin import fetch_webpage_content
@@ -247,18 +247,18 @@ class TestPluginSSLConfiguration(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.content = b'<html><body><p>Test content</p></body></html>'
         mock_response.raise_for_status = MagicMock()
-        mock_requests_get.return_value = mock_response
+        mock_requests_get.return_value.get.return_value = mock_response
 
         # Fetch webpage
         fetch_webpage_content('https://example.com')
 
         # Verify requests.get was called with verify=False
-        mock_requests_get.assert_called_once()
-        call_kwargs = mock_requests_get.call_args[1]
+        mock_requests_get.return_value.get.assert_called_once()
+        call_kwargs = mock_requests_get.return_value.get.call_args[1]
         self.assertIn('verify', call_kwargs)
         self.assertFalse(call_kwargs['verify'])
 
-    @patch('optillm.plugins.readurls_plugin.requests.get')
+    @patch('optillm.plugins.readurls_plugin.requests.Session')
     def test_readurls_plugin_ssl_verify_enabled(self, mock_requests_get):
         """Test readurls plugin respects SSL verification enabled."""
         from optillm.plugins.readurls_plugin import fetch_webpage_content
@@ -271,18 +271,18 @@ class TestPluginSSLConfiguration(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.content = b'<html><body><p>Test content</p></body></html>'
         mock_response.raise_for_status = MagicMock()
-        mock_requests_get.return_value = mock_response
+        mock_requests_get.return_value.get.return_value = mock_response
 
         # Fetch webpage
         fetch_webpage_content('https://example.com')
 
         # Verify requests.get was called with verify=True
-        mock_requests_get.assert_called_once()
-        call_kwargs = mock_requests_get.call_args[1]
+        mock_requests_get.return_value.get.assert_called_once()
+        call_kwargs = mock_requests_get.return_value.get.call_args[1]
         self.assertIn('verify', call_kwargs)
         self.assertTrue(call_kwargs['verify'])
 
-    @patch('optillm.plugins.readurls_plugin.requests.get')
+    @patch('optillm.plugins.readurls_plugin.requests.Session')
     def test_readurls_plugin_custom_cert_path(self, mock_requests_get):
         """Test readurls plugin uses custom certificate path."""
         from optillm.plugins.readurls_plugin import fetch_webpage_content
@@ -296,14 +296,14 @@ class TestPluginSSLConfiguration(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.content = b'<html><body><p>Test content</p></body></html>'
         mock_response.raise_for_status = MagicMock()
-        mock_requests_get.return_value = mock_response
+        mock_requests_get.return_value.get.return_value = mock_response
 
         # Fetch webpage
         fetch_webpage_content('https://example.com')
 
         # Verify requests.get was called with custom cert path
-        mock_requests_get.assert_called_once()
-        call_kwargs = mock_requests_get.call_args[1]
+        mock_requests_get.return_value.get.assert_called_once()
+        call_kwargs = mock_requests_get.return_value.get.call_args[1]
         self.assertIn('verify', call_kwargs)
         self.assertEqual(call_kwargs['verify'], test_cert_path)
 

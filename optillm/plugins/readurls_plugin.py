@@ -1,12 +1,65 @@
+import ipaddress
 import re
+import socket
 from typing import Tuple, List, Optional
 import requests
+from requests.adapters import HTTPAdapter
 import os
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 from optillm import __version__, server_config
 
 SLUG = "readurls"
+
+
+def resolve_public_ip(url: str) -> Optional[str]:
+    """Resolve *url* once and return a pinned public IP address, if safe."""
+    parsed_url = urlparse(url)
+    if parsed_url.scheme not in {"http", "https"} or not parsed_url.hostname:
+        return None
+
+    try:
+        addresses = socket.getaddrinfo(
+            parsed_url.hostname, None, type=socket.SOCK_STREAM
+        )
+    except (socket.gaierror, ValueError):
+        return None
+
+    try:
+        ip_addresses = [ipaddress.ip_address(address[4][0]) for address in addresses]
+    except ValueError:
+        return None
+
+    if not ip_addresses or not all(address.is_global for address in ip_addresses):
+        return None
+    return str(ip_addresses[0])
+
+
+class PinnedIPAdapter(HTTPAdapter):
+    """Connect to a validated IP while retaining the original HTTPS hostname."""
+
+    def __init__(self, verified_ip: str, hostname: str):
+        self.verified_ip = verified_ip
+        self.hostname = hostname
+        super().__init__()
+
+    def get_connection_with_tls_context(self, request, verify, proxies=None, cert=None):
+        host_params, pool_kwargs = self.build_connection_pool_key_attributes(
+            request, verify, cert
+        )
+        host_params["host"] = self.verified_ip
+        if host_params["scheme"] == "https":
+            pool_kwargs["assert_hostname"] = self.hostname
+            pool_kwargs["server_hostname"] = self.hostname
+        request.headers["Host"] = urlparse(request.url).netloc
+        return self.poolmanager.connection_from_host(
+            **host_params, pool_kwargs=pool_kwargs
+        )
+
+
+def is_safe_url(url: str) -> bool:
+    return resolve_public_ip(url) is not None
+
 
 def extract_urls(text: str) -> List[str]:
     # Updated regex pattern to be more precise
@@ -44,7 +97,36 @@ def fetch_webpage_content(url: str, max_length: int = 100000, verify_ssl: Option
         else:
             verify = True
 
-        response = requests.get(url, headers=headers, timeout=10, verify=verify)
+        current_url = url
+        for _ in range(5):
+            verified_ip = resolve_public_ip(current_url)
+            parsed_url = urlparse(current_url)
+            if not verified_ip or not parsed_url.hostname:
+                return "Error fetching content: blocked unsafe URL"
+
+            session = requests.Session()
+            session.trust_env = False
+            session.mount(
+                f"{parsed_url.scheme}://",
+                PinnedIPAdapter(verified_ip, parsed_url.hostname),
+            )
+            response = session.get(
+                current_url,
+                headers=headers,
+                timeout=10,
+                verify=verify,
+                allow_redirects=False,
+            )
+            if not response.is_redirect:
+                break
+
+            location = response.headers.get("Location")
+            if not location:
+                return "Error fetching content: redirect missing Location header"
+            current_url = urljoin(current_url, location)
+        else:
+            return "Error fetching content: too many redirects"
+
         response.raise_for_status()
         
         # Make a soup 
