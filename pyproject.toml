@@ -48,7 +48,7 @@ dependencies = [
     "cerebras_cloud_sdk",
     "outlines[transformers]>=1.2.3",
     "sentencepiece",
-    "mcp",
+    "mcp<2",
     "adaptive-classifier",
     "datasets",
     "math-verify",
