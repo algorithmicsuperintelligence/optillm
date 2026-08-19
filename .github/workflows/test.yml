@@ -36,6 +36,14 @@ jobs:
         pip install -r tests/requirements.txt
         pip install -e .
     
+    - name: Cache HuggingFace models
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/huggingface
+        key: ${{ runner.os }}-hf-codelion-dhara-250m
+        restore-keys: |
+          ${{ runner.os }}-hf-
+
     - name: Run unit tests (no server required)
       run: |
         # Set up local inference environment
@@ -81,20 +89,31 @@ jobs:
         pip install -r tests/requirements.txt
         pip install -e .
     
+    - name: Cache HuggingFace models
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/huggingface
+        key: ${{ runner.os }}-hf-codelion-dhara-250m
+        restore-keys: |
+          ${{ runner.os }}-hf-
+
     - name: Start optillm server
       run: |
         echo "Starting optillm server for integration tests..."
-        OPTILLM_API_KEY=optillm python optillm.py --model google/gemma-3-270m-it --port 8000 &
+        OPTILLM_API_KEY=optillm python optillm.py --model codelion/dhara-250m --port 8000 &
         echo $! > server.pid
         
         # Wait for server to be ready
         echo "Waiting for server to start..."
         sleep 15
-        
+
         # Test server health
         curl -s http://localhost:8000/health || echo "Server health check failed"
       env:
         OPTILLM_API_KEY: optillm
+        # Bound generation for the small test model, which does not reliably emit
+        # an EOS token and would otherwise ramble up to the 4096 default per call.
+        OPTILLM_MAX_TOKENS: "128"
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
     
     - name: Run integration tests (server required)
@@ -174,12 +193,20 @@ jobs:
         pip install -r tests/requirements.txt
         pip install -e .
 
+    - name: Cache HuggingFace models
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/huggingface
+        key: ${{ runner.os }}-hf-codelion-dhara-250m
+        restore-keys: |
+          ${{ runner.os }}-hf-
+
     - name: Start optillm server with conversation logging
       run: |
         echo "Starting optillm server with conversation logging..."
         mkdir -p /tmp/optillm_conversations
         OPTILLM_API_KEY=optillm python optillm.py \
-          --model google/gemma-3-270m-it \
+          --model codelion/dhara-250m \
           --port 8000 \
           --log-conversations \
           --conversation-log-dir /tmp/optillm_conversations &
@@ -193,6 +220,9 @@ jobs:
         curl -s http://localhost:8000/health || echo "Server health check failed"
       env:
         OPTILLM_API_KEY: optillm
+        # Bound generation for the small test model, which does not reliably emit
+        # an EOS token and would otherwise ramble up to the 4096 default per call.
+        OPTILLM_MAX_TOKENS: "128"
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
     - name: Run conversation logging tests

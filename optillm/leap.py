@@ -28,6 +28,21 @@ class LEAP:
         match = re.search(r'<output>(.*?)(?:</output>|$)', text, re.DOTALL)
         return match.group(1).strip() if match else ""
 
+    def _extract_content(self, response, context: str) -> str:
+        """Validate a provider response and return its message content.
+
+        Guards against the empty / None / length-truncated responses that would
+        otherwise raise IndexError/TypeError downstream (e.g. when the content
+        is fed to extract_output or split). Mirrors the response-validation
+        idiom already used in moa/bon/plansearch.
+        """
+        if (response is None or
+                not response.choices or
+                response.choices[0].message.content is None or
+                response.choices[0].finish_reason == "length"):
+            raise Exception(f"LEAP: provider returned an empty, None, or truncated response while {context}")
+        return response.choices[0].message.content
+
     def extract_examples_from_query(self, initial_query: str) -> List[Tuple[str, str]]:
         logger.info("Extracting examples from initial query")
         
@@ -66,7 +81,7 @@ class LEAP:
             optillm.conversation_logger.log_provider_call(self.request_id, provider_request, response_dict)
             
         self.leap_completion_tokens += response.usage.completion_tokens
-        examples_str = self.extract_output(response.choices[0].message.content)
+        examples_str = self.extract_output(self._extract_content(response, "extracting examples from the query"))
         logger.debug(f"Extracted examples: {examples_str}")
         examples = []
         if examples_str:
@@ -109,7 +124,7 @@ class LEAP:
                 response_dict = response.model_dump() if hasattr(response, 'model_dump') else response
                 optillm.conversation_logger.log_provider_call(self.request_id, provider_request, response_dict)
             self.leap_completion_tokens += response.usage.completion_tokens
-            generated_reasoning = response.choices[0].message.content
+            generated_reasoning = self._extract_content(response, "generating reasoning for a mistake example")
             generated_answer = self.extract_output(generated_reasoning)
             if generated_answer != correct_answer:
                 mistakes.append((question, generated_reasoning, generated_answer, correct_answer))
@@ -148,7 +163,7 @@ class LEAP:
                 response_dict = response.model_dump() if hasattr(response, 'model_dump') else response
                 optillm.conversation_logger.log_provider_call(self.request_id, provider_request, response_dict)
             self.leap_completion_tokens += response.usage.completion_tokens
-            self.low_level_principles.append(self.extract_output(response.choices[0].message.content))
+            self.low_level_principles.append(self.extract_output(self._extract_content(response, "generating low-level principles")))
         return self.low_level_principles
 
     def generate_high_level_principles(self) -> List[str]:
@@ -181,7 +196,7 @@ class LEAP:
             response_dict = response.model_dump() if hasattr(response, 'model_dump') else response
             optillm.conversation_logger.log_provider_call(self.request_id, provider_request, response_dict)
         self.leap_completion_tokens += response.usage.completion_tokens
-        self.high_level_principles = self.extract_output(response.choices[0].message.content).split("\n")
+        self.high_level_principles = self.extract_output(self._extract_content(response, "generating high-level principles")).split("\n")
         return self.high_level_principles
 
     def apply_principles(self, query: str) -> str:
@@ -210,7 +225,7 @@ class LEAP:
             response_dict = response.model_dump() if hasattr(response, 'model_dump') else response
             optillm.conversation_logger.log_provider_call(self.request_id, provider_request, response_dict)
         self.leap_completion_tokens += response.usage.completion_tokens
-        return response.choices[0].message.content
+        return self._extract_content(response, "applying principles to the query")
 
     def solve(self, initial_query: str) -> str:
         logger.info("Starting LEAP process")

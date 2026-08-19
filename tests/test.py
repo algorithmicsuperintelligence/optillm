@@ -79,7 +79,10 @@ def run_approach(approach_name: str, system_prompt: str, query: str, client, mod
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=0.7
+                temperature=0.7,
+                # Cap output: the small local test model does not always emit an
+                # EOS token on simple prompts, so bound generation to keep tests fast.
+                max_tokens=64
             )
             result = (response.choices[0].message.content, response.usage.total_tokens)
         else:

@@ -39,6 +39,15 @@ class AdvancedSelfConsistency:
                 response_dict = response.model_dump() if hasattr(response, 'model_dump') else response
                 optillm.conversation_logger.log_provider_call(self.request_id, provider_request, response_dict)
             
+            # Skip empty, None, or length-truncated samples so they do not flow
+            # into similarity clustering (a None content crashes SequenceMatcher).
+            if (response is None or
+                    not response.choices or
+                    response.choices[0].message.content is None or
+                    response.choices[0].finish_reason == "length"):
+                logger.warning("Self-consistency sample was empty, None, or truncated, skipping")
+                continue
+
             self.self_consistency_completion_tokens += response.usage.completion_tokens
             responses.append(response.choices[0].message.content)
         return responses

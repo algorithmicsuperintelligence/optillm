@@ -421,6 +421,70 @@ def run_performance_comparison():
     }
 
 
+class TestGenerationConfigDefaults(unittest.TestCase):
+    """Unit tests for env-configurable max_new_tokens and EOS resolution.
+
+    These exercise the guards that keep a small local model from rambling up to
+    the 4096-token default when it does not reliably emit an EOS token (e.g. a
+    ChatML model whose tokenizer EOS differs from the chat-turn end token). No
+    model is loaded.
+    """
+
+    def tearDown(self):
+        os.environ.pop("OPTILLM_MAX_TOKENS", None)
+
+    def test_default_max_new_tokens_env_override(self):
+        from optillm.inference import _default_max_new_tokens, DEFAULT_MAX_NEW_TOKENS
+
+        os.environ.pop("OPTILLM_MAX_TOKENS", None)
+        self.assertEqual(_default_max_new_tokens(), DEFAULT_MAX_NEW_TOKENS)
+
+        os.environ["OPTILLM_MAX_TOKENS"] = "128"
+        self.assertEqual(_default_max_new_tokens(), 128)
+
+        # Invalid value falls back to the default rather than raising.
+        os.environ["OPTILLM_MAX_TOKENS"] = "not-a-number"
+        self.assertEqual(_default_max_new_tokens(), DEFAULT_MAX_NEW_TOKENS)
+
+        # Non-positive is clamped to a usable minimum.
+        os.environ["OPTILLM_MAX_TOKENS"] = "0"
+        self.assertEqual(_default_max_new_tokens(), 1)
+
+    def test_resolve_eos_prefers_generation_config(self):
+        from types import SimpleNamespace
+        from optillm.inference import InferencePipeline
+
+        # tokenizer EOS (<|end_of_text|>=1) differs from the chat end token
+        # (<|im_end|>=49154); both must be honoured, generation_config first.
+        fake = SimpleNamespace(
+            current_model=SimpleNamespace(generation_config=SimpleNamespace(eos_token_id=49154)),
+            tokenizer=SimpleNamespace(eos_token_id=1),
+        )
+        eos = InferencePipeline._resolve_eos_token_ids(fake)
+        self.assertEqual(eos, [49154, 1])
+
+    def test_resolve_eos_dedupes_list(self):
+        from types import SimpleNamespace
+        from optillm.inference import InferencePipeline
+
+        fake = SimpleNamespace(
+            current_model=SimpleNamespace(generation_config=SimpleNamespace(eos_token_id=[100, 200])),
+            tokenizer=SimpleNamespace(eos_token_id=200),
+        )
+        self.assertEqual(InferencePipeline._resolve_eos_token_ids(fake), [100, 200])
+
+    def test_resolve_eos_falls_back_to_tokenizer(self):
+        from types import SimpleNamespace
+        from optillm.inference import InferencePipeline
+
+        fake = SimpleNamespace(
+            current_model=SimpleNamespace(generation_config=SimpleNamespace(eos_token_id=None)),
+            tokenizer=SimpleNamespace(eos_token_id=7),
+        )
+        # A single id is returned as a plain int, not a list.
+        self.assertEqual(InferencePipeline._resolve_eos_token_ids(fake), 7)
+
+
 if __name__ == "__main__":
     # Run tests
     unittest.main(verbosity=2)

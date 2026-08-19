@@ -11,9 +11,11 @@ import platform
 from typing import Optional
 from openai import OpenAI
 
-# Standard test model for all tests - small and fast
-TEST_MODEL = "google/gemma-3-270m-it"
-TEST_MODEL_MLX = "mlx-community/gemma-3-270m-it-bf16"
+# Standard test model for all tests - small and fast (~250M params)
+TEST_MODEL = "codelion/dhara-250m"
+# MLX build is only used on Apple Silicon; no MLX variant of dhara exists yet,
+# so MLX-specific tests continue to use the Qwen build (skipped on non-macOS CI).
+TEST_MODEL_MLX = "mlx-community/Qwen2.5-Coder-0.5B-Instruct-bf16"
 
 def setup_test_env():
     """Set up test environment with local inference"""

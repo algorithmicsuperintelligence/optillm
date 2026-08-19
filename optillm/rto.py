@@ -41,6 +41,11 @@ def round_trip_optimization(system_prompt: str, initial_query: str, client, mode
         response_dict = response_c1.model_dump() if hasattr(response_c1, 'model_dump') else response_c1
         optillm.conversation_logger.log_provider_call(request_id, provider_request, response_dict)
     
+    if (response_c1 is None or
+            not response_c1.choices or
+            response_c1.choices[0].message.content is None or
+            response_c1.choices[0].finish_reason == "length"):
+        raise Exception("RTO: provider returned an empty, None, or truncated response for the initial code (C1)")
     c1 = response_c1.choices[0].message.content
     rto_completion_tokens += response_c1.usage.completion_tokens
 
@@ -61,6 +66,11 @@ def round_trip_optimization(system_prompt: str, initial_query: str, client, mode
         response_dict = response_q2.model_dump() if hasattr(response_q2, 'model_dump') else response_q2
         optillm.conversation_logger.log_provider_call(request_id, provider_request, response_dict)
     
+    if (response_q2 is None or
+            not response_q2.choices or
+            response_q2.choices[0].message.content is None or
+            response_q2.choices[0].finish_reason == "length"):
+        raise Exception("RTO: provider returned an empty, None, or truncated response for the description (Q2)")
     q2 = response_q2.choices[0].message.content
     rto_completion_tokens += response_q2.usage.completion_tokens
 
@@ -81,6 +91,11 @@ def round_trip_optimization(system_prompt: str, initial_query: str, client, mode
         response_dict = response_c2.model_dump() if hasattr(response_c2, 'model_dump') else response_c2
         optillm.conversation_logger.log_provider_call(request_id, provider_request, response_dict)
     
+    if (response_c2 is None or
+            not response_c2.choices or
+            response_c2.choices[0].message.content is None or
+            response_c2.choices[0].finish_reason == "length"):
+        raise Exception("RTO: provider returned an empty, None, or truncated response for the second code (C2)")
     c2 = response_c2.choices[0].message.content
     rto_completion_tokens += response_c2.usage.completion_tokens
 
@@ -106,6 +121,11 @@ def round_trip_optimization(system_prompt: str, initial_query: str, client, mode
         response_dict = response_c3.model_dump() if hasattr(response_c3, 'model_dump') else response_c3
         optillm.conversation_logger.log_provider_call(request_id, provider_request, response_dict)
     
+    if (response_c3 is None or
+            not response_c3.choices or
+            response_c3.choices[0].message.content is None or
+            response_c3.choices[0].finish_reason == "length"):
+        raise Exception("RTO: provider returned an empty, None, or truncated response for the final code (C3)")
     c3 = response_c3.choices[0].message.content
     rto_completion_tokens += response_c3.usage.completion_tokens
 

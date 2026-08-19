@@ -77,8 +77,7 @@ class ThinkDeeperProcessor:
             messages,
             continue_final_message=True,
             return_tensors="pt"
-        )
-        tokens = tokens.to(self.model.device)
+        ).input_ids.to(self.model.device)
 
         kv = DynamicCache()
         n_thinking_tokens = 0

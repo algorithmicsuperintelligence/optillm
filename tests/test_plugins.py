@@ -32,7 +32,8 @@ def test_plugin_module_imports():
         'optillm.plugins.longcepo_plugin',
         'optillm.plugins.spl_plugin',
         'optillm.plugins.proxy_plugin',
-        'optillm.plugins.mcp_plugin'
+        'optillm.plugins.mcp_plugin',
+        'optillm.plugins.compact_plugin'
     ]
     
     for module_name in plugin_modules:
@@ -53,7 +54,7 @@ def test_plugin_approach_detection():
     load_plugins()
     
     # Check if known plugins are loaded
-    expected_plugins = ["memory", "readurls", "privacy", "web_search", "deep_research", "deepthink", "longcepo", "spl", "proxy", "mcp"]
+    expected_plugins = ["memory", "readurls", "privacy", "web_search", "deep_research", "deepthink", "longcepo", "spl", "proxy", "mcp", "compact"]
     for plugin_name in expected_plugins:
         assert plugin_name in plugin_approaches, f"Plugin {plugin_name} not loaded"
 
@@ -65,6 +66,62 @@ def test_memory_plugin_structure():
     assert hasattr(plugin, 'SLUG')
     assert plugin.SLUG == "memory"
     assert hasattr(plugin, 'Memory')  # Check for Memory class
+
+
+def test_memory_plugin_persistence():
+    """Test opt-in file-backed persistence for the memory plugin (issue #111).
+
+    Covers the round trip, graceful degradation on a missing/corrupt file, and
+    that the default (no persist_path) never touches the filesystem.
+    """
+    import json
+    import tempfile
+    from optillm.plugins.memory_plugin import Memory
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "memory.json")
+
+        # Round trip: items written by one instance load into the next.
+        m1 = Memory(persist_path=path)
+        m1.add("alpha")
+        m1.add("beta")
+        assert os.path.exists(path), "add() should persist when persist_path is set"
+
+        m2 = Memory(persist_path=path)
+        assert m2.items == ["alpha", "beta"], "persisted items should load on init"
+
+        # A missing file is a valid first run, not an error.
+        missing = os.path.join(tmp, "does_not_exist.json")
+        m3 = Memory(persist_path=missing)
+        assert m3.items == []
+
+        # A corrupt file degrades to an empty store without raising.
+        corrupt = os.path.join(tmp, "corrupt.json")
+        with open(corrupt, "w", encoding="utf-8") as f:
+            f.write("{not valid json")
+        m4 = Memory(persist_path=corrupt)
+        assert m4.items == []
+
+        # A non-list JSON payload is ignored rather than trusted.
+        wrong_shape = os.path.join(tmp, "wrong.json")
+        with open(wrong_shape, "w", encoding="utf-8") as f:
+            json.dump({"items": ["x"]}, f)
+        m5 = Memory(persist_path=wrong_shape)
+        assert m5.items == []
+
+        # max_size is honoured on load (most recent items win).
+        big = os.path.join(tmp, "big.json")
+        with open(big, "w", encoding="utf-8") as f:
+            json.dump([str(i) for i in range(10)], f)
+        m6 = Memory(max_size=3, persist_path=big)
+        assert m6.items == ["7", "8", "9"]
+
+        # Default behaviour is unchanged: no persist_path means no file I/O.
+        no_persist = os.path.join(tmp, "should_not_be_created.json")
+        m7 = Memory()
+        m7.add("gamma")
+        assert not os.path.exists(no_persist)
+        assert m7.persist_path is None
 
 
 def test_genselect_plugin():
@@ -304,6 +361,14 @@ def test_mcp_plugin():
     assert plugin.SLUG == "mcp"
 
 
+def test_compact_plugin():
+    """Test compact plugin module"""
+    import optillm.plugins.compact_plugin as plugin
+    assert hasattr(plugin, 'run')
+    assert hasattr(plugin, 'SLUG')
+    assert plugin.SLUG == "compact"
+
+
 def test_plugin_subdirectory_imports():
     """Test all plugins with subdirectories can import their submodules"""
     # Test deep_research
@@ -363,6 +428,104 @@ def test_no_relative_import_errors():
                 raise
 
 
+# ---------------------------------------------------------------------------
+# Router plugin: the classifier model must be loaded once and cached, not
+# reloaded on every request. These tests mock the heavy loaders so they need
+# no network or real weights.
+# ---------------------------------------------------------------------------
+import threading as _threading
+import contextlib as _contextlib
+from unittest import mock as _mock
+
+
+class _FakeRouterConfig:
+    hidden_size = 768
+
+
+def _install_router_loader_mocks(stack, load_counter):
+    """Patch router_plugin's heavy loaders; load_counter grows once per base-model load."""
+    from optillm.plugins import router_plugin
+
+    def fake_from_pretrained(*args, **kwargs):
+        load_counter.append(1)
+        base = _mock.MagicMock()
+        base.config = _FakeRouterConfig()
+        return base
+
+    stack.enter_context(_mock.patch.object(
+        router_plugin.AutoModel, "from_pretrained", side_effect=fake_from_pretrained))
+    stack.enter_context(_mock.patch.object(
+        router_plugin, "hf_hub_download", return_value="/tmp/fake.safetensors"))
+    stack.enter_context(_mock.patch.object(
+        router_plugin, "load_model", return_value=None))
+    stack.enter_context(_mock.patch.object(
+        router_plugin.AutoTokenizer, "from_pretrained", return_value=_mock.MagicMock()))
+    return router_plugin
+
+
+def test_router_plugin_caches_model():
+    """load_optillm_model() must load the base model once across repeated calls."""
+    from optillm.plugins import router_plugin
+    router_plugin._model_cache = None
+    loads = []
+    try:
+        with _contextlib.ExitStack() as stack:
+            _install_router_loader_mocks(stack, loads)
+            first = router_plugin.load_optillm_model()
+            for _ in range(5):
+                assert router_plugin.load_optillm_model() is first, \
+                    "load_optillm_model() must return the cached bundle"
+        assert len(loads) == 1, (
+            f"expected exactly 1 base-model load across 6 calls, got {len(loads)} "
+            "(model is being reloaded per request instead of cached)")
+    finally:
+        router_plugin._model_cache = None
+
+
+def test_router_plugin_cache_bundle_shape():
+    """The cached value is the (model, tokenizer, device) triple callers unpack."""
+    from optillm.plugins import router_plugin
+    router_plugin._model_cache = None
+    try:
+        with _contextlib.ExitStack() as stack:
+            _install_router_loader_mocks(stack, [])
+            bundle = router_plugin.load_optillm_model()
+        assert isinstance(bundle, tuple) and len(bundle) == 3, "expected a 3-tuple bundle"
+        model, tokenizer, device = bundle
+        assert isinstance(model, router_plugin.OptILMClassifier)
+        assert tokenizer is not None and device is not None
+    finally:
+        router_plugin._model_cache = None
+
+
+def test_router_plugin_concurrent_single_load():
+    """Concurrent first-time access must still load the model exactly once."""
+    from optillm.plugins import router_plugin
+    router_plugin._model_cache = None
+    loads = []
+    results = []
+    try:
+        with _contextlib.ExitStack() as stack:
+            _install_router_loader_mocks(stack, loads)
+            barrier = _threading.Barrier(8)
+
+            def worker():
+                barrier.wait()  # maximize contention on the first load
+                results.append(router_plugin.load_optillm_model())
+
+            threads = [_threading.Thread(target=worker) for _ in range(8)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+        assert len(loads) == 1, (
+            f"expected exactly 1 load under concurrency, got {len(loads)} "
+            "(the double-checked lock is not serializing the first load)")
+        assert all(r is results[0] for r in results), "threads saw different cached bundles"
+    finally:
+        router_plugin._model_cache = None
+
+
 if __name__ == "__main__":
     print("Running plugin tests...")
     
@@ -383,7 +546,31 @@ if __name__ == "__main__":
         print("✅ Memory plugin structure test passed")
     except Exception as e:
         print(f"❌ Memory plugin structure test failed: {e}")
-    
+
+    try:
+        test_memory_plugin_persistence()
+        print("✅ Memory plugin persistence test passed")
+    except Exception as e:
+        print(f"❌ Memory plugin persistence test failed: {e}")
+
+    try:
+        test_router_plugin_caches_model()
+        print("✅ Router plugin model caching test passed")
+    except Exception as e:
+        print(f"❌ Router plugin model caching test failed: {e}")
+
+    try:
+        test_router_plugin_cache_bundle_shape()
+        print("✅ Router plugin cache bundle shape test passed")
+    except Exception as e:
+        print(f"❌ Router plugin cache bundle shape test failed: {e}")
+
+    try:
+        test_router_plugin_concurrent_single_load()
+        print("✅ Router plugin concurrent single-load test passed")
+    except Exception as e:
+        print(f"❌ Router plugin concurrent single-load test failed: {e}")
+
     try:
         test_genselect_plugin()
         print("✅ GenSelect plugin test passed")

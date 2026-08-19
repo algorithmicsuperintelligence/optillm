@@ -1,3 +1,5 @@
+import threading
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -47,12 +49,23 @@ class OptILMClassifier(nn.Module):
         logits = self.classifier(combined_input)
         return logits
 
-def load_optillm_model():
+# Cache the loaded router model/tokenizer/device across requests. Building it is
+# expensive and one-time: it deserializes the ~400M-param ModernBERT-large base
+# model, does a HuggingFace Hub round-trip to fetch the fine-tuned safetensors, and
+# constructs the tokenizer. The classifier is stateless at inference time (see
+# predict_approach: model.eval() + torch.no_grad), so the loaded objects are safe
+# to reuse. The lock makes the first concurrent load run exactly once under the
+# threaded Flask server; subsequent calls take the lock-free fast path.
+_model_cache = None
+_model_cache_lock = threading.Lock()
+
+
+def _load_optillm_model():
     device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
     # Load the base model
     base_model = AutoModel.from_pretrained(BASE_MODEL)
     # Create the OptILMClassifier
-    model = OptILMClassifier(base_model, num_labels=len(APPROACHES))  
+    model = OptILMClassifier(base_model, num_labels=len(APPROACHES))
     model.to(device)
     # Download the safetensors file
     safetensors_path = hf_hub_download(repo_id=OPTILLM_MODEL_NAME, filename="model.safetensors")
@@ -61,6 +74,17 @@ def load_optillm_model():
 
     tokenizer = AutoTokenizer.from_pretrained(OPTILLM_MODEL_NAME)
     return model, tokenizer, device
+
+
+def load_optillm_model():
+    # Double-checked locking: return the cached bundle immediately when present,
+    # and only serialize the very first (concurrent) load.
+    global _model_cache
+    if _model_cache is None:
+        with _model_cache_lock:
+            if _model_cache is None:
+                _model_cache = _load_optillm_model()
+    return _model_cache
 
 def preprocess_input(tokenizer, system_prompt, initial_query):
     combined_input = f"{system_prompt}\n\nUser: {initial_query}"

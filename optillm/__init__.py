@@ -1,5 +1,17 @@
 # Version information
-__version__ = "0.3.14"
+__version__ = "0.3.22"
+
+import os as _os
+
+# An empty Hugging Face token is not the same as "no token". huggingface_hub 1.x
+# (pulled in by transformers 5) sends an empty token as the literal header
+# "Authorization: Bearer ", which the HTTP stack rejects with
+# "Illegal header value b'Bearer '". This happens whenever HF_TOKEN is present but
+# blank, e.g. a forked-PR CI run where ${{ secrets.HF_TOKEN }} resolves to "".
+# Treat any blank HF token env var as unset so anonymous access is used instead.
+for _hf_token_var in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACE_HUB_TOKEN", "HF_HUB_TOKEN"):
+    if _hf_token_var in _os.environ and not _os.environ[_hf_token_var].strip():
+        del _os.environ[_hf_token_var]
 
 # Import from server module
 from .server import (

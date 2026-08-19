@@ -22,7 +22,7 @@ class JSONGenerator:
         else:
             return torch.device("cpu")
 
-    def __init__(self, model_name: str = "google/gemma-3-270m-it"):
+    def __init__(self, model_name: str = "Qwen/Qwen2.5-Coder-0.5B-Instruct"):
         """Initialize the JSON generator with a specific model."""
         self.device = self.get_device()
         logger.info(f"Using device: {self.device}")

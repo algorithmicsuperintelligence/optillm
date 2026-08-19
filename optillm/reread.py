@@ -50,11 +50,20 @@ def re2_approach(system_prompt, initial_query, client, model, n=1, request_confi
             response_dict = response.model_dump() if hasattr(response, 'model_dump') else response
             optillm.conversation_logger.log_provider_call(request_id, provider_request, response_dict)
         
+        if response is None or not response.choices:
+            raise Exception("re2_approach: provider returned an empty or None response")
         re2_completion_tokens += response.usage.completion_tokens
         if n == 1:
+            if (response.choices[0].message.content is None or
+                    response.choices[0].finish_reason == "length"):
+                raise Exception("re2_approach: provider returned a None or truncated response")
             return response.choices[0].message.content.strip(), re2_completion_tokens
         else:
-            return [choice.message.content.strip() for choice in response.choices], re2_completion_tokens
+            # Keep only choices that produced usable, non-truncated content,
+            # consistent with how the single-choice path treats a truncation.
+            return [choice.message.content.strip() for choice in response.choices
+                    if choice.message.content is not None
+                    and choice.finish_reason != "length"], re2_completion_tokens
     
     except Exception as e:
         logger.error(f"Error in RE2 approach: {str(e)}")

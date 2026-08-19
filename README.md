@@ -9,9 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/algorithmicsuperintelligence/optillm/stargazers"><img src="https://img.shields.io/github/stars/algorithmicsuperintelligence/optillm?style=social" alt="GitHub stars"></a>
   <a href="https://pypi.org/project/optillm/"><img src="https://img.shields.io/pypi/v/optillm" alt="PyPI version"></a>
-  <a href="https://pypi.org/project/optillm/"><img src="https://img.shields.io/pypi/dm/optillm" alt="PyPI downloads"></a>
+  <a href="https://pepy.tech/projects/optillm"><img src="https://static.pepy.tech/personalized-badge/optillm?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=downloads/month" alt="PyPI Downloads"></a>
   <a href="https://github.com/algorithmicsuperintelligence/optillm/blob/main/LICENSE"><img src="https://img.shields.io/github/license/algorithmicsuperintelligence/optillm" alt="License"></a>
 </p>
 
@@ -190,7 +189,7 @@ optillm
 | MCP Client              | `mcp`              | Implements the model context protocol (MCP) client, enabling you to use any LLM with any MCP Server  |
 | Router                  | `router`           | Uses the [optillm-modernbert-large](https://huggingface.co/codelion/optillm-modernbert-large) model to route requests to different approaches based on the user prompt |
 | Chain-of-Code           | `coc`              | Implements a chain of code approach that combines CoT with code execution and LLM based code simulation |
-| Memory                  | `memory`           | Implements a short term memory layer, enables you to use unbounded context length with any LLM |
+| Memory                  | `memory`           | Implements a short term memory layer, enables you to use unbounded context length with any LLM. Set `OPTILLM_MEMORY_FILE` to opt in to file-backed persistence so memories survive across requests |
 | Privacy                 | `privacy`          | Anonymize PII data in request and deanonymize it back to original value in response            |
 | Read URLs               | `readurls`         | Reads all URLs found in the request, fetches the content at the URL and adds it to the context |
 | Execute Code            | `executecode`      | Enables use of code interpreter to execute python code in requests and LLM generated responses |
