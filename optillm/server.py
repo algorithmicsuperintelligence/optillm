@@ -555,6 +555,45 @@ def execute_n_times(n: int, approaches, operation: str, system_prompt: str, init
         return responses[0], total_tokens
     return responses, total_tokens
 
+def generate_streaming_completion(completion, model):
+    """Stream a full chat completion (dict, or list of dicts) as SSE chunks.
+
+    Unlike generate_streaming_response, which only forwards message text, this
+    keeps tool calls and reasoning, so agents that stream (and call tools) get
+    the whole answer. Each choice goes out as one chunk.
+    """
+    completions = completion if isinstance(completion, list) else [completion]
+    response_id = f"chatcmpl-{int(time.time()*1000)}"
+    created = int(time.time())
+    usage = None
+    for comp in completions:
+        if not isinstance(comp, dict):
+            comp = {"choices": [{"message": {"content": str(comp)}}]}
+        usage = comp.get("usage") or usage
+        for i, choice in enumerate(comp.get("choices") or []):
+            message = choice.get("message") or {}
+            delta = {"role": "assistant", "content": message.get("content") or ""}
+            for key in ("reasoning", "reasoning_content"):
+                if message.get(key):
+                    delta[key] = message[key]
+            if message.get("tool_calls"):
+                delta["tool_calls"] = [dict(tc, index=j) for j, tc in enumerate(message["tool_calls"])]
+            chunk = {
+                "id": comp.get("id") or response_id,
+                "object": "chat.completion.chunk",
+                "created": comp.get("created") or created,
+                "model": comp.get("model") or model,
+                "choices": [{"index": choice.get("index", i), "delta": delta,
+                             "finish_reason": choice.get("finish_reason")
+                             or ("tool_calls" if delta.get("tool_calls") else "stop")}],
+            }
+            yield "data: " + json.dumps(chunk) + "\n\n"
+    if usage:
+        yield "data: " + json.dumps({"id": response_id, "object": "chat.completion.chunk",
+                                     "created": created, "model": model, "choices": [],
+                                     "usage": usage}) + "\n\n"
+    yield "data: [DONE]\n\n"
+
 def generate_streaming_response(final_response, model):
     # Generate a unique response ID
     response_id = f"chatcmpl-{int(time.time()*1000)}"
@@ -846,7 +885,7 @@ def proxy():
             if stream:
                 if request_id:
                     logger.info(f'Request {request_id}: Completed (streaming response)')
-                return Response(generate_streaming_response(extract_contents(result), model), content_type='text/event-stream')
+                return Response(generate_streaming_completion(result, model), content_type='text/event-stream')
             else :
                 if request_id:
                     logger.info(f'Request {request_id}: Completed')
@@ -869,7 +908,7 @@ def proxy():
             if stream:
                 if request_id:
                     logger.info(f'Request {request_id}: Completed (streaming response)')
-                return Response(generate_streaming_response(extract_contents(response), model), content_type='text/event-stream')
+                return Response(generate_streaming_completion(response, model), content_type='text/event-stream')
             else:
                 if request_id:
                     logger.info(f'Request {request_id}: Completed')
