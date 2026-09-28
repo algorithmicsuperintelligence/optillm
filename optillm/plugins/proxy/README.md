@@ -25,7 +25,7 @@ optillm --version
 
 ### 1. Create Configuration
 
-Create `~/.optillm/proxy_config.yaml` (or point `OPTILLM_PROXY_CONFIG` at a config file elsewhere). If neither exists, an empty template is created at `~/.optillm/proxy_config.yaml` and requests go to the server's default client (`--base-url`) until you add providers.
+Create `~/.optillm/proxy_config.yaml`. If it doesn't exist, an empty template is created at `~/.optillm/proxy_config.yaml` and requests go to the server's default client (`--base-url`) until you add providers.
 
 ```yaml
 providers:

@@ -109,20 +109,10 @@ class TestProxyConfig(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_does_not_fall_back_to_bundled_example(self):
-        with patch.object(Path, "home", return_value=Path(self.tmp.name)), \
-             patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("OPTILLM_PROXY_CONFIG", None)
+        with patch.object(Path, "home", return_value=Path(self.tmp.name)):
             config = ProxyConfig.load()
         self.assertEqual(config["providers"], [])
         self.assertTrue((Path(self.tmp.name) / ".optillm" / "proxy_config.yaml").exists())
-
-    def test_config_path_from_env(self):
-        path = Path(self.tmp.name) / "custom.yaml"
-        path.write_text("providers:\n  - name: llamacpp\n    base_url: http://localhost:8080/v1\n    api_key: none\n")
-        with patch.dict(os.environ, {"OPTILLM_PROXY_CONFIG": str(path)}):
-            config = ProxyConfig.load()
-        self.assertEqual(config["providers"][0]["base_url"], "http://localhost:8080/v1")
-        self.assertNotIn("log_level", config["monitoring"])
 
 
 class TestProxyClientFailover(unittest.TestCase):

@@ -33,9 +33,6 @@ class ProxyConfig:
             return cls._cached_config
             
         if not path:
-            path = os.environ.get('OPTILLM_PROXY_CONFIG')
-
-        if not path:
             # Priority order for config files. The bundled example_config.yaml
             # is deliberately not used: its sample providers would silently
             # receive traffic meant for the user's own endpoints.

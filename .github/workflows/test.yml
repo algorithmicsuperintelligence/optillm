@@ -52,6 +52,7 @@ jobs:
         # Run tests that don't need server - fast feedback!
         python tests/test_ci_quick.py
         python -m pytest tests/test_plugins.py -v --tb=short || python tests/test_plugins.py
+        python -m pytest tests/test_proxy_plugin.py -v --tb=short
         python tests/test_approaches.py
         python tests/test_reasoning_simple.py
         python tests/test_batching.py
