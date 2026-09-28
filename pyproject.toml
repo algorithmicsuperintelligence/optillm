@@ -48,7 +48,7 @@ dependencies = [
     "cerebras_cloud_sdk",
     "outlines[transformers]>=1.2.3",
     "sentencepiece",
-    "mcp[ws]>=1.6,<2",  # mcp 2.x removed the websocket client and McpError
+    "mcp>=2,<3",
     "adaptive-classifier",
     "datasets",
     "math-verify",

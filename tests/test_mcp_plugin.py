@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from optillm.plugins.mcp_plugin import (
     ServerConfig, MCPServer, MCPConfigManager, MCPServerManager,
     execute_tool, execute_tool_stdio, execute_tool_sse, execute_tool_websocket,
-    LoggingClientSession, SLUG
+    execute_tool_streamable_http, execute_tool_with_session, LoggingClientSession, SLUG
 )
 
 
@@ -208,6 +208,14 @@ class TestMCPServer:
         result = await server.connect_websocket()
         assert not result
 
+    async def test_connect_streamable_http_validation(self):
+        """Test Streamable HTTP connection validation"""
+        config = ServerConfig(transport="streamable_http")  # No URL
+        server = MCPServer("test_server", config)
+
+        result = await server.connect_streamable_http()
+        assert not result
+
     async def test_connect_and_discover_unsupported_transport(self):
         """Test unsupported transport type"""
         config = ServerConfig(transport="invalid")
@@ -301,12 +309,35 @@ class TestToolExecution:
         assert "error" in result
         assert "requires URL" in result["error"]
 
-    async def test_execute_tool_websocket_no_url(self):
-        """Test WebSocket tool execution without URL"""
-        config = ServerConfig(transport="websocket")  # No URL
+    async def test_execute_tool_websocket_unsupported(self):
+        """WebSocket transport was removed in mcp 2.x and reports a clear error"""
+        config = ServerConfig(transport="websocket", url="ws://localhost:1234")
         result = await execute_tool_websocket(config, "test_tool", {})
         assert "error" in result
+        assert "no longer supported" in result["error"]
+
+    async def test_execute_tool_streamable_http_no_url(self):
+        """Test Streamable HTTP tool execution without URL"""
+        config = ServerConfig(transport="streamable_http")  # No URL
+        result = await execute_tool_streamable_http(config, "test_tool", {})
+        assert "error" in result
         assert "requires URL" in result["error"]
+
+    async def test_execute_tool_with_session_result(self):
+        """Tool results are read from mcp 2.x snake_case fields"""
+        import mcp.types as types
+        session = AsyncMock()
+        session.call_tool.return_value = types.CallToolResult(
+            content=[types.TextContent(type="text", text="hello"),
+                     types.ImageContent(type="image", data="aGk=", mime_type="image/png")],
+            is_error=False,
+        )
+        result = await execute_tool_with_session(session, "test_tool", {})
+        assert result == {
+            "result": [{"type": "text", "text": "hello"},
+                       {"type": "image", "data": "aGk=", "mimeType": "image/png"}],
+            "is_error": False,
+        }
 
 
 class TestMCPServerManager:
@@ -410,9 +441,11 @@ class TestPluginStructure:
         """Test that required modules can be imported"""
         try:
             from mcp.client.sse import sse_client
-            from mcp.client.websocket import websocket_client
+            from mcp.client.streamable_http import streamable_http_client
+            from mcp.shared.exceptions import MCPError
             assert sse_client is not None
-            assert websocket_client is not None
+            assert streamable_http_client is not None
+            assert MCPError is not None
         except ImportError as e:
             pytest.fail(f"Required MCP imports failed: {e}")
 
@@ -504,6 +537,7 @@ if __name__ == "__main__":
             'test_connect_stdio_validation',
             'test_connect_sse_validation',
             'test_connect_websocket_validation',
+            'test_connect_streamable_http_validation',
             'test_connect_and_discover_unsupported_transport'
         ]
 
@@ -523,7 +557,9 @@ if __name__ == "__main__":
             'test_execute_tool_unsupported_transport',
             'test_execute_tool_stdio_no_command',
             'test_execute_tool_sse_no_url',
-            'test_execute_tool_websocket_no_url'
+            'test_execute_tool_websocket_unsupported',
+            'test_execute_tool_streamable_http_no_url',
+            'test_execute_tool_with_session_result'
         ]
 
         for method_name in tool_methods:
