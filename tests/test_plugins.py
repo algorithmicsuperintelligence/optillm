@@ -238,13 +238,16 @@ def test_proxy_plugin_token_counts():
     }
     mock_client.chat.completions.create.return_value = mock_response
     
-    # Run the proxy plugin
-    result, _ = plugin.run(
-        system_prompt="Test system",
-        initial_query="Test query",
-        client=mock_client,
-        model="test-model"
-    )
+    # Run the proxy plugin with no providers configured so it uses mock_client,
+    # regardless of any ~/.optillm/proxy_config.yaml on the machine
+    from unittest.mock import patch
+    with patch.object(plugin.ProxyConfig, 'load', return_value={'providers': []}):
+        result, _ = plugin.run(
+            system_prompt="Test system",
+            initial_query="Test query",
+            client=mock_client,
+            model="test-model"
+        )
     
     # Verify the result contains all token counts
     assert isinstance(result, dict), "Result should be a dictionary"

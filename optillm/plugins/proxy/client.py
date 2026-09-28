@@ -101,6 +101,24 @@ class Provider:
         # Note: _value is internal but there's no public method to check availability
         return self._semaphore._value
 
+def list_provider_models(config: Dict) -> List[Dict[str, Any]]:
+    """
+    Collect the models exposed by every configured provider, plus any
+    model_map aliases, de-duplicated by id. Unreachable providers are skipped.
+    """
+    models = {}
+    for provider_config in config.get('providers', []):
+        provider = Provider(provider_config)
+        try:
+            for model in provider.client.models.list(timeout=config.get('timeouts', {}).get('connect', 5)).data:
+                model_dict = model.model_dump() if hasattr(model, 'model_dump') else dict(model)
+                models.setdefault(model_dict['id'], model_dict)
+        except Exception as e:
+            logger.warning(f"Could not list models from provider {provider.name}: {e}")
+        for alias in provider.model_map:
+            models.setdefault(alias, {"id": alias, "object": "model", "created": 0, "owned_by": provider.name})
+    return list(models.values())
+
 class ProxyClient:
     """OpenAI-compatible client that proxies to multiple providers"""
     
@@ -275,6 +293,12 @@ class ProxyClient:
                 if not healthy_providers:
                     logger.warning("No healthy providers, trying fallback providers")
                     healthy_providers = self.proxy_client.fallback_providers
+
+                if not healthy_providers:
+                    # Still prefer the configured providers over the server's
+                    # default client, which may point somewhere else entirely
+                    logger.warning("No fallback providers configured, retrying all providers")
+                    healthy_providers = self.proxy_client.active_providers
                 
                 # Try routing through healthy providers
                 while healthy_providers:
@@ -339,7 +363,13 @@ class ProxyClient:
                     except Exception as e:
                         logger.error(f"Provider {provider.name} failed: {e}")
                         errors.append((provider.name, str(e)))
-                        
+
+                        # A rejected request (4xx other than timeout/rate limit)
+                        # says nothing about the provider's health
+                        status_code = getattr(e, 'status_code', None)
+                        if status_code is not None and 400 <= status_code < 500 and status_code not in (408, 429):
+                            continue
+
                         # Mark provider as unhealthy
                         if self.proxy_client.track_errors:
                             provider.is_healthy = False

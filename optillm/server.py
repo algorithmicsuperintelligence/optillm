@@ -393,7 +393,7 @@ def parse_combined_approach(model: str, known_approaches: list, plugin_approache
 
     return operation, approaches, actual_model
 
-def execute_single_approach(approach, system_prompt, initial_query, client, model, request_config: dict = None, request_id: str = None):
+def execute_single_approach(approach, system_prompt, initial_query, client, model, request_config: dict = None, request_id: str = None, messages: list = None):
     if approach in known_approaches:
         if approach == 'none':
             # Use the request_config that was already prepared and passed to this function
@@ -403,12 +403,15 @@ def execute_single_approach(approach, system_prompt, initial_query, client, mode
             # Note: 'n' is NOT removed - the none_approach passes it to the client which handles multiple completions
             kwargs.pop('stream', None)  # stream is handled by proxy()
 
-            # Reconstruct original messages from system_prompt and initial_query
-            messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            if initial_query:
-                messages.append({"role": "user", "content": initial_query})
+            # Pass the original messages through when available so multi-turn
+            # structure, tool_calls and tool results reach the provider intact.
+            # Otherwise reconstruct them from system_prompt and initial_query.
+            if not messages:
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                if initial_query:
+                    messages.append({"role": "user", "content": initial_query})
 
             logger.debug(f"none_approach kwargs: {kwargs}")
             response = none_approach(original_messages=messages, client=client, model=model, request_id=request_id, **kwargs)
@@ -481,9 +484,13 @@ def execute_single_approach(approach, system_prompt, initial_query, client, mode
                 loop.close()
         else:
             # For synchronous functions, call directly
+            plugin_kwargs = {}
+            if 'messages' in sig.parameters:
+                # Plugin wants the original request messages (e.g. proxy passthrough)
+                plugin_kwargs['messages'] = messages
             if 'request_config' in sig.parameters:
                 # Plugin supports request_config
-                return plugin_func(system_prompt, initial_query, client, model, request_config=request_config)
+                return plugin_func(system_prompt, initial_query, client, model, request_config=request_config, **plugin_kwargs)
             else:
                 # Legacy plugin without request_config support
                 return plugin_func(system_prompt, initial_query, client, model)
@@ -509,7 +516,7 @@ async def execute_parallel_approaches(approaches, system_prompt, initial_query, 
     return list(responses), sum(tokens)
 
 def execute_n_times(n: int, approaches, operation: str, system_prompt: str, initial_query: str, client: Any, model: str,
-                     request_config: dict = None, request_id: str = None) -> Tuple[Union[str, List[str]], int]:
+                     request_config: dict = None, request_id: str = None, messages: list = None) -> Tuple[Union[str, List[str]], int]:
     """
     Execute the pipeline n times and return n responses.
 
@@ -530,7 +537,7 @@ def execute_n_times(n: int, approaches, operation: str, system_prompt: str, init
 
     for _ in range(n):
         if operation == 'SINGLE':
-            response, tokens = execute_single_approach(approaches[0], system_prompt, initial_query, client, model, request_config, request_id)
+            response, tokens = execute_single_approach(approaches[0], system_prompt, initial_query, client, model, request_config, request_id, messages)
         elif operation == 'AND':
             response, tokens = execute_combined_approaches(approaches, system_prompt, initial_query, client, model, request_config)
         elif operation == 'OR':
@@ -584,20 +591,44 @@ def generate_streaming_response(final_response, model):
     # Yield the final message to indicate the stream has ended
     yield "data: [DONE]\n\n"
 
-def extract_contents(response_obj):
-    contents = []
-    # Handle both single response and list of responses
-    responses = response_obj if isinstance(response_obj, list) else [response_obj]
+def generate_streaming_completion(completion, model, include_usage=False):
+    """
+    Convert a full (non-streamed) chat completion dict into SSE chunks.
 
-    for response in responses:
-        # Extract content from first choice if it exists
-        if (response.get('choices') and
-            len(response['choices']) > 0 and
-            response['choices'][0].get('message') and
-            response['choices'][0]['message'].get('content')):
-            contents.append(response['choices'][0]['message']['content'])
+    Unlike generate_streaming_response, this keeps tool_calls, reasoning
+    content, finish_reason and usage so agent clients (Crush, Cline, etc.)
+    get the same information they would from a streamed provider response.
+    """
+    response_id = completion.get('id') or f"chatcmpl-{int(time.time()*1000)}"
+    created = completion.get('created') or int(time.time())
+    model = completion.get('model') or model
 
-    return contents
+    def chunk(choices, **extra):
+        return "data: " + json.dumps({
+            "id": response_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model,
+            "choices": choices,
+            **extra,
+        }) + "\n\n"
+
+    for choice in completion.get('choices') or []:
+        message = choice.get('message') or {}
+        delta = {"role": message.get('role') or "assistant"}
+        for key in ('content', 'reasoning_content', 'refusal'):
+            if message.get(key) is not None:
+                delta[key] = message[key]
+        if message.get('tool_calls'):
+            # Streamed tool call deltas must carry their position in the list
+            delta['tool_calls'] = [{"index": i, **tool_call} for i, tool_call in enumerate(message['tool_calls'])]
+        yield chunk([{"index": choice.get('index', 0), "delta": delta, "finish_reason": None}])
+        yield chunk([{"index": choice.get('index', 0), "delta": {}, "finish_reason": choice.get('finish_reason') or "stop"}])
+
+    if include_usage and completion.get('usage'):
+        yield chunk([], usage=completion['usage'])
+
+    yield "data: [DONE]\n\n"
 
 def parse_conversation(messages):
     system_prompt = ""
@@ -605,18 +636,22 @@ def parse_conversation(messages):
     optillm_approach = None
 
     for message in messages:
-        role = message['role']
-        content = message['content']
+        role = message.get('role')
+        # Assistant messages carrying tool_calls have content None
+        content = message.get('content') or ''
 
         # Handle content that could be a list or string
         if isinstance(content, list):
             # Extract text content from the list
             text_content = ' '.join(
-                item['text'] for item in content
+                item.get('text', '') for item in content
                 if isinstance(item, dict) and item.get('type') == 'text'
             )
         else:
             text_content = content
+
+        if role == 'assistant' and not text_content:
+            continue
 
         if role == 'system':
             system_prompt, optillm_approach = extract_optillm_approach(text_content)
@@ -686,6 +721,26 @@ def extract_optillm_approach(content):
         return content, approach
     return content, None
 
+def strip_optillm_approach_tags(messages):
+    """
+    Return a copy of the request messages with <optillm_approach> tags removed,
+    keeping roles, tool_calls and tool results intact for passthrough.
+    """
+    stripped = []
+    for message in messages:
+        message = dict(message)
+        content = message.get('content')
+        if isinstance(content, str):
+            message['content'], _ = extract_optillm_approach(content)
+        elif isinstance(content, list):
+            message['content'] = [
+                {**item, 'text': extract_optillm_approach(item['text'])[0]}
+                if isinstance(item, dict) and isinstance(item.get('text'), str) else item
+                for item in content
+            ]
+        stripped.append(message)
+    return stripped
+
 # Optional API key configuration to secure the proxy
 @app.before_request
 def check_api_key():
@@ -726,8 +781,12 @@ def proxy():
     max_completion_tokens = data.get('max_completion_tokens')
     max_tokens = data.get('max_tokens')
 
+    # stream_options only applies to our own SSE output; upstream calls are
+    # never streamed and providers reject stream_options without stream=true
+    include_usage = bool((data.get('stream_options') or {}).get('include_usage'))
+
     # Explicit keys that we are already handling
-    explicit_keys = {'stream', 'messages', 'model', 'n', 'response_format', 'max_completion_tokens', 'max_tokens'}
+    explicit_keys = {'stream', 'stream_options', 'messages', 'model', 'n', 'response_format', 'max_completion_tokens', 'max_tokens'}
 
     # Copy the rest into request_config
     request_config = {k: v for k, v in data.items() if k not in explicit_keys}
@@ -761,6 +820,7 @@ def proxy():
     # params into every later request). See issue #304.
 
     system_prompt, initial_query, message_optillm_approach = parse_conversation(messages)
+    passthrough_messages = strip_optillm_approach_tags(messages)
 
     if message_optillm_approach:
         optillm_approach = message_optillm_approach
@@ -834,7 +894,7 @@ def proxy():
 
         if operation == 'SINGLE' and approaches[0] == 'none':
             # Pass through the request including the n parameter
-            result, completion_tokens = execute_single_approach(approaches[0], system_prompt, initial_query, client, model, request_config, request_id)
+            result, completion_tokens = execute_single_approach(approaches[0], system_prompt, initial_query, client, model, request_config, request_id, passthrough_messages)
 
             logger.debug(f'Direct proxy response: {result}')
 
@@ -846,7 +906,7 @@ def proxy():
             if stream:
                 if request_id:
                     logger.info(f'Request {request_id}: Completed (streaming response)')
-                return Response(generate_streaming_response(extract_contents(result), model), content_type='text/event-stream')
+                return Response(generate_streaming_completion(result, model, include_usage), content_type='text/event-stream')
             else :
                 if request_id:
                     logger.info(f'Request {request_id}: Completed')
@@ -857,7 +917,7 @@ def proxy():
                 raise ValueError("'none' approach cannot be combined with other approaches")
 
         # Handle non-none approaches with n attempts
-        response, completion_tokens = execute_n_times(n, approaches, operation, system_prompt, initial_query, client, model, request_config, request_id)
+        response, completion_tokens = execute_n_times(n, approaches, operation, system_prompt, initial_query, client, model, request_config, request_id, passthrough_messages)
 
         # Check if the response is a full dict (like from proxy plugin or none approach)
         if operation == 'SINGLE' and isinstance(response, dict) and 'choices' in response and 'usage' in response:
@@ -869,7 +929,7 @@ def proxy():
             if stream:
                 if request_id:
                     logger.info(f'Request {request_id}: Completed (streaming response)')
-                return Response(generate_streaming_response(extract_contents(response), model), content_type='text/event-stream')
+                return Response(generate_streaming_completion(response, model, include_usage), content_type='text/event-stream')
             else:
                 if request_id:
                     logger.info(f'Request {request_id}: Completed')
@@ -957,7 +1017,18 @@ def proxy_models():
     logger.info('Received request to /v1/models')
     default_client, API_KEY = get_config()
     try:
-        if server_config['base_url']:
+        proxy_models_data = None
+        if server_config['approach'] == 'proxy':
+            # List models from the proxy plugin's providers, not --base-url
+            from optillm.plugins.proxy.config import ProxyConfig
+            from optillm.plugins.proxy.client import list_provider_models
+            proxy_config = ProxyConfig.load()
+            if proxy_config.get('providers'):
+                proxy_models_data = {"object": "list", "data": list_provider_models(proxy_config)}
+
+        if proxy_models_data is not None:
+            models_data = proxy_models_data
+        elif server_config['base_url']:
             client = OpenAI(api_key=API_KEY, base_url=server_config['base_url'])
             # For external API, fetch models using the OpenAI client
             models_response = client.models.list()
@@ -1018,7 +1089,7 @@ def parse_args():
         ("--return-full-response", "OPTILLM_RETURN_FULL_RESPONSE", bool, False, "Return the full response including the CoT with <thinking> tags"),
         ("--host", "OPTILLM_HOST", str, "127.0.0.1", "Host address to bind the server to (use 0.0.0.0 to allow external connections)"),
         ("--port", "OPTILLM_PORT", int, 8000, "Specify the port to run the proxy"),
-        ("--log", "OPTILLM_LOG", str, "info", "Specify the logging level", list(logging_levels.keys())),
+        ("--log", "OPTILLM_LOG", str.lower, "info", "Specify the logging level", list(logging_levels.keys())),
         ("--launch-gui", "OPTILLM_LAUNCH_GUI", bool, False, "Launch a Gradio chat interface"),
         ("--plugins-dir", "OPTILLM_PLUGINS_DIR", str, "", "Path to the plugins directory"),
         ("--log-conversations", "OPTILLM_LOG_CONVERSATIONS", bool, False, "Enable conversation logging with full metadata"),
@@ -1263,6 +1334,8 @@ def main():
     # Set logging level from user request
     logging_level = server_config['log']
     if logging_level in logging_levels.keys():
+        # Set the root logger so approach and plugin loggers inherit the level too
+        logging.getLogger().setLevel(logging_levels[logging_level])
         logger.setLevel(logging_levels[logging_level])
 
     # Initialize conversation logger if enabled

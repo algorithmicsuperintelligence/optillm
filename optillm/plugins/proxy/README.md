@@ -25,7 +25,7 @@ optillm --version
 
 ### 1. Create Configuration
 
-Create `~/.optillm/proxy_config.yaml`:
+Create `~/.optillm/proxy_config.yaml` (or point `OPTILLM_PROXY_CONFIG` at a config file elsewhere). If neither exists, an empty template is created at `~/.optillm/proxy_config.yaml` and requests go to the server's default client (`--base-url`) until you add providers.
 
 ```yaml
 providers:
@@ -66,6 +66,22 @@ optillm
 
 # With custom port
 optillm --approach proxy --port 8000
+```
+
+With `--approach proxy`, `/v1/models` lists the models reported by your configured providers (plus any `model_map` aliases), so you don't need to set `--base-url` as well.
+
+#### Local servers and agent clients
+
+The proxy passes the original messages through unchanged, including `tools`, assistant `tool_calls` and `tool` results, so coding agents (e.g. Crush) work through it. For a local llama.cpp server:
+
+```yaml
+providers:
+  - name: llamacpp
+    base_url: http://localhost:8080/v1
+    api_key: none
+
+timeouts:
+  request: 300  # local models on long agent prompts can take well over the 30s default
 ```
 
 ### 3. Usage Examples
@@ -188,7 +204,7 @@ queue:
 **How it works:**
 - **Request Timeout**: Each request to a provider has a maximum time limit. If exceeded, the request is cancelled and the next provider is tried.
 - **Queue Management**: Limits concurrent requests to prevent memory exhaustion. New requests wait up to `queue.timeout` seconds before being rejected.
-- **Automatic Failover**: When a provider times out, it's marked unhealthy and the request automatically fails over to the next available provider.
+- **Automatic Failover**: When a provider times out or returns a server error, it's marked unhealthy and the request automatically fails over to the next available provider. Rejected requests (4xx) don't mark a provider unhealthy. If every provider is unhealthy, the proxy still retries them before falling back to the server's default client.
 - **Protection**: Prevents slow backends from causing queue buildup that can crash the proxy server.
 
 ### Per-Provider Concurrency Limits
@@ -311,11 +327,11 @@ providers:
 
 ### Logging
 
-Enable detailed logging for debugging:
+Proxy logs follow the server log level (`--log debug` or `OPTILLM_LOG=debug`). To use a different level for the proxy only, set it in the config:
 
 ```yaml
 monitoring:
-  log_level: DEBUG  # Options: DEBUG, INFO, WARNING, ERROR
+  log_level: DEBUG  # Optional. Options: DEBUG, INFO, WARNING, ERROR
   track_latency: true
   track_errors: true
 ```
@@ -361,8 +377,7 @@ When `track_latency` is enabled, the proxy logs:
 Enable debug logging to see detailed routing decisions:
 
 ```bash
-export OPTILLM_LOG_LEVEL=DEBUG
-python optillm.py
+optillm --approach proxy --log debug
 ```
 
 ## Best Practices
