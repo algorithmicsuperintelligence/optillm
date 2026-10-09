@@ -174,6 +174,10 @@ providers:
       gpt-3.5-turbo: gpt-35-turbo
 ```
 
+Providers with `fallback_only: true` are tried after the normal providers fail or
+reach their concurrency limits, before the server's default client. Each configured
+provider is attempted at most once per request.
+
 ### Routing Strategies
 
 ```yaml
