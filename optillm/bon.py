@@ -37,7 +37,11 @@ def best_of_n_sampling(system_prompt: str, initial_query: str, client, model: st
         if response is None or not response.choices:
             raise Exception("Response is None or has no choices")
 
-        completions = [choice.message.content for choice in response.choices if choice.message.content is not None]
+        completions = [
+            choice.message.content for choice in response.choices
+            if choice.message.content and choice.message.content.strip()
+            and choice.finish_reason != "length"
+        ]
         logger.info(f"Generated {len(completions)} initial completions using n parameter. Tokens used: {response.usage.completion_tokens}")
         bon_completion_tokens += response.usage.completion_tokens
 
@@ -68,7 +72,8 @@ def best_of_n_sampling(system_prompt: str, initial_query: str, client, model: st
                 # Check for valid response with None-checking
                 if (response is None or
                     not response.choices or
-                    response.choices[0].message.content is None or
+                    not response.choices[0].message.content or
+                    not response.choices[0].message.content.strip() or
                     response.choices[0].finish_reason == "length"):
                     logger.warning(f"Completion {i+1}/{n} truncated or empty, skipping")
                     continue
