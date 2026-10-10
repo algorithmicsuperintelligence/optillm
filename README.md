@@ -342,6 +342,8 @@ We support loading any HuggingFace model or LoRA directly in optillm. To use the
 and then use the same in your OpenAI client. You can pass any HuggingFace model in model field. If it is a private model make sure you set the `HF_TOKEN` environment variable
 with your HuggingFace key. We also support adding any number of LoRAs on top of the model by using the `+` separator.
 
+To check whether a model will fit before you download it, the [LLM Memory Calculator](https://www.merasaas.com/tools/llm-memory-calculator) estimates the memory needed for weights, KV cache and fine-tuning, and [Mac LLM Fit](https://www.merasaas.com/tools/mac-llm-fit) does the same for Apple silicon.
+
 E.g. The following code loads the base model `meta-llama/Llama-3.2-1B-Instruct` and then adds two LoRAs on top - `patched-codes/Llama-3.2-1B-FixVulns` and `patched-codes/Llama-3.2-1B-FastApply`.
 You can specify which LoRA to use using the `active_adapter` param in `extra_body` field of OpenAI SDK client. By default we will load the last specified adapter.
 
