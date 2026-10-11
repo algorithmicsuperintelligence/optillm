@@ -317,13 +317,15 @@ This rephrasing should help clarify the problem and guide the solution process."
 
     def extract_answer(self, final_state: str) -> Tuple[str, float]:
         logger.debug(f"Extracting answer from state: {final_state}")
+        # Keep the full numeric value when assigning rewards and counting votes.
+        number_pattern = r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?"
         patterns = [
-            r"The answer is (\d+)",
-            r"The final answer is (\d+)",
-            r"Therefore, the answer is (\d+)",
-            r"So, the answer is (\d+)",
-            r"Thus, the answer is (\d+)",
-            r"In conclusion, the answer is (\d+)",
+            rf"The answer is ({number_pattern})",
+            rf"The final answer is ({number_pattern})",
+            rf"Therefore, the answer is ({number_pattern})",
+            rf"So, the answer is ({number_pattern})",
+            rf"Thus, the answer is ({number_pattern})",
+            rf"In conclusion, the answer is ({number_pattern})",
         ]
         
         for pattern in patterns:
@@ -335,7 +337,7 @@ This rephrasing should help clarify the problem and guide the solution process."
                 return answer, confidence
         
         # If no pattern is found, try to extract any number
-        numbers = re.findall(r'\d+', final_state)
+        numbers = re.findall(number_pattern, final_state)
         if numbers:
             answer = numbers[-1]  # Take the last number found
             confidence = 0.5  # Lower confidence as it's not in the expected format
