@@ -53,7 +53,8 @@ class RStar:
         logger.debug(f"Expanded node with action: {action}")
         return child_node
 
-    async def simulate_async(self, node: Node) -> float:
+    async def simulate_async(self, node: Node) -> Tuple[Node, float]:
+        """Return the evaluated node so the whole rollout can receive its reward."""
         current_node = node
         depth = 0
         logger.debug("Starting simulation")
@@ -66,7 +67,7 @@ class RStar:
             depth += 1
         value = self.evaluate(current_node)
         logger.debug(f"Simulation complete. Final value: {value}")
-        return value
+        return current_node, value
 
     async def mcts_async(self, root_state: str) -> List[Node]:
         root = Node(root_state, None)
@@ -83,8 +84,8 @@ class RStar:
         action = random.choice(self.actions)
         if len(node.children) < len(self.actions):
             node = await self.expand_async(node, action)
-        value = await self.simulate_async(node)
-        self.backpropagate(node, value)
+        terminal_node, value = await self.simulate_async(node)
+        self.backpropagate(terminal_node, value)
 
     async def solve_async(self, question: str) -> str:
         self.original_question = question
@@ -149,7 +150,8 @@ class RStar:
         logger.debug(f"Expanded node with action: {action}")
         return child_node
 
-    def simulate(self, node: Node) -> float:
+    def simulate(self, node: Node) -> Tuple[Node, float]:
+        """Return the evaluated node so the whole rollout can receive its reward."""
         current_node = node
         depth = 0
         logger.debug("Starting simulation")
@@ -162,7 +164,7 @@ class RStar:
             depth += 1
         value = self.evaluate(current_node)
         logger.debug(f"Simulation complete. Final value: {value}")
-        return value
+        return current_node, value
 
     def backpropagate(self, node: Node, value: float):
         logger.debug("Starting backpropagation")
@@ -183,8 +185,8 @@ class RStar:
             action = random.choice(self.actions)
             if len(node.children) < len(self.actions):
                 node = self.expand(node, action)
-            value = self.simulate(node)
-            self.backpropagate(node, value)
+            terminal_node, value = self.simulate(node)
+            self.backpropagate(terminal_node, value)
         logger.debug("MCTS complete")
         return self.extract_trajectories(root)
 
