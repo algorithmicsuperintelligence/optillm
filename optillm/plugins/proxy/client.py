@@ -304,7 +304,12 @@ class ProxyClient:
                 while healthy_providers:
                     available_providers = [p for p in healthy_providers if p not in attempted_providers]
                     if not available_providers:
-                        break
+                        available_providers = [
+                            p for p in self.proxy_client.fallback_providers
+                            if p not in attempted_providers
+                        ]
+                        if not available_providers:
+                            break
                         
                     provider = self.proxy_client.router.select(available_providers)
                     logger.info(f"Router selected provider: {provider.name if provider else 'None'}")
