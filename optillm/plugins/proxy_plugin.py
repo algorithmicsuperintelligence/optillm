@@ -9,6 +9,7 @@ from typing import Tuple, Optional
 from optillm.plugins.proxy.config import ProxyConfig
 from optillm.plugins.proxy.client import ProxyClient
 from optillm.plugins.proxy.approach_handler import ApproachHandler
+from optillm.minimax import is_minimax_client, prepare_minimax_request
 
 SLUG = "proxy"
 logger = logging.getLogger(__name__)
@@ -68,6 +69,8 @@ def run(system_prompt: str, initial_query: str, client, model: str,
             # Strip stream parameter to force complete response
             api_config = dict(request_config or {})
             api_config.pop('stream', None)
+            if is_minimax_client(client):
+                prepare_minimax_request(model, api_config)
 
             response = client.chat.completions.create(
                 model=model,
@@ -165,6 +168,8 @@ def run(system_prompt: str, initial_query: str, client, model: str,
         # Strip stream parameter to force complete response
         api_config = dict(request_config or {})
         api_config.pop('stream', None)
+        if is_minimax_client(client):
+            prepare_minimax_request(model, api_config)
 
         response = client.chat.completions.create(
             model=model,

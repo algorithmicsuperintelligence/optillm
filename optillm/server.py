@@ -37,6 +37,10 @@ from optillm.cepo.cepo import cepo, CepoConfig, init_cepo_config
 from optillm.mars import multi_agent_reasoning_system
 from optillm.batching import RequestBatcher, BatchingError
 from optillm.conversation_logger import ConversationLogger
+from optillm.minimax import (
+    MINIMAX_MODELS, current_minimax_models, default_model,
+    is_minimax_client, is_minimax_request, prepare_minimax_request,
+)
 import optillm.conversation_logger
 
 # Setup logging
@@ -191,7 +195,7 @@ server_config = {
     'mcts_exploration': 0.2,
     'mcts_depth': 1,
     'best_of_n': 3,
-    'model': 'gpt-4o-mini',
+    'model': default_model(),
     'rstar_max_depth': 3,
     'rstar_num_rollouts': 5,
     'rstar_c': 1.4,
@@ -261,8 +265,8 @@ def none_approach(
         model = model[5:]
 
     try:
-        # Normalize message content to ensure it's always string
-        normalized_messages = normalize_message_content(original_messages)
+        # Verified MiniMax routes accept structured image/video content parts.
+        normalized_messages = original_messages if is_minimax_request(client, model) else normalize_message_content(original_messages)
 
         # Prepare request data for logging
         provider_request = {
@@ -880,15 +884,6 @@ def _execute_completion(data: dict, messages: list, bearer_token: str) -> Comple
     base_url = server_config['base_url']
     default_client, api_key = get_config()
 
-    # Clamp temperature for MiniMax provider: must be in (0.0, 1.0]
-    if os.environ.get("MINIMAX_API_KEY") and 'temperature' in request_config:
-        temp = request_config['temperature']
-        if temp is not None:
-            if temp <= 0:
-                request_config['temperature'] = 0.01
-            elif temp > 1.0:
-                request_config['temperature'] = 1.0
-
     operation, approaches, model = parse_combined_approach(model, known_approaches, plugin_approaches)
 
     # Start conversation logging if enabled
@@ -922,6 +917,9 @@ def _execute_completion(data: dict, messages: list, bearer_token: str) -> Comple
         client = default_client
 
     try:
+        if 'proxy' not in approaches and is_minimax_client(client):
+            prepare_minimax_request(model, request_config)
+
         # Route to batch processing if batch mode is enabled
         if request_batcher is not None:
             try:
@@ -1210,6 +1208,14 @@ def proxy_models():
 
         if proxy_models_data is not None:
             models_data = proxy_models_data
+        elif is_minimax_client(default_client):
+            models_data = {
+                "object": "list",
+                "data": [
+                    {"id": model, "object": "model", "created": 0, "owned_by": "minimax"}
+                    for model in MINIMAX_MODELS
+                ],
+            }
         elif server_config['base_url']:
             client = OpenAI(api_key=API_KEY, base_url=server_config['base_url'])
             # For external API, fetch models using the OpenAI client
@@ -1234,6 +1240,8 @@ def proxy_models():
                 ]
             }
 
+        if proxy_models_data is None:
+            models_data['data'] = current_minimax_models(default_client, models_data['data'])
         logger.debug('Models retrieved successfully')
         return jsonify(models_data), 200
     except Exception as e:
@@ -1263,7 +1271,7 @@ def parse_args():
         ("--mcts-simulations", "OPTILLM_SIMULATIONS", int, 2, "Number of MCTS simulations"),
         ("--mcts-exploration", "OPTILLM_EXPLORATION", float, 0.2, "Exploration weight for MCTS"),
         ("--mcts-depth", "OPTILLM_DEPTH", int, 1, "Simulation depth for MCTS"),
-        ("--model", "OPTILLM_MODEL", str, "gpt-4o-mini", "OpenAI model to use"),
+        ("--model", "OPTILLM_MODEL", str, default_model(), "Model to use"),
         ("--rstar-max-depth", "OPTILLM_RSTAR_MAX_DEPTH", int, 3, "Maximum depth for rStar algorithm"),
         ("--rstar-num-rollouts", "OPTILLM_RSTAR_NUM_ROLLOUTS", int, 5, "Number of rollouts for rStar algorithm"),
         ("--rstar-c", "OPTILLM_RSTAR_C", float, 1.4, "Exploration constant for rStar algorithm"),

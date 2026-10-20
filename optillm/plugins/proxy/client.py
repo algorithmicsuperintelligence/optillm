@@ -8,6 +8,7 @@ from typing import Dict, List, Any, Optional
 import concurrent.futures
 import threading
 from openai import OpenAI, AzureOpenAI
+from optillm.minimax import MINIMAX_MODELS, current_minimax_models, is_minimax_client, prepare_minimax_request
 from optillm.plugins.proxy.routing import RouterFactory
 from optillm.plugins.proxy.health import HealthChecker
 
@@ -110,8 +111,14 @@ def list_provider_models(config: Dict) -> List[Dict[str, Any]]:
     for provider_config in config.get('providers', []):
         provider = Provider(provider_config)
         try:
-            for model in provider.client.models.list(timeout=config.get('timeouts', {}).get('connect', 5)).data:
-                model_dict = model.model_dump() if hasattr(model, 'model_dump') else dict(model)
+            if is_minimax_client(provider.client):
+                for model_id in MINIMAX_MODELS:
+                    models.setdefault(model_id, {"id": model_id, "object": "model", "created": 0, "owned_by": provider.name})
+            provider_models = [
+                model.model_dump() if hasattr(model, 'model_dump') else dict(model)
+                for model in provider.client.models.list(timeout=config.get('timeouts', {}).get('connect', 5)).data
+            ]
+            for model_dict in current_minimax_models(provider.client, provider_models):
                 models.setdefault(model_dict['id'], model_dict)
         except Exception as e:
             logger.warning(f"Could not list models from provider {provider.name}: {e}")
@@ -326,6 +333,8 @@ class ProxyClient:
                         request_kwargs = self._filter_kwargs(kwargs.copy())
                         mapped_model = provider.map_model(model)
                         request_kwargs['model'] = mapped_model
+                        if is_minimax_client(provider.client):
+                            prepare_minimax_request(mapped_model, request_kwargs)
                         
                         # Format messages based on provider's system message support
                         if 'messages' in request_kwargs:
@@ -386,6 +395,8 @@ class ProxyClient:
                     try:
                         fallback_kwargs = self._filter_kwargs(kwargs.copy())
                         fallback_kwargs['timeout'] = self.proxy_client.request_timeout
+                        if is_minimax_client(self.proxy_client.fallback_client):
+                            prepare_minimax_request(model, fallback_kwargs)
                         return self.proxy_client.fallback_client.chat.completions.create(**fallback_kwargs)
                     except Exception as e:
                         errors.append(("fallback_client", str(e)))
