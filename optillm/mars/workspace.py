@@ -69,7 +69,7 @@ class MARSWorkspace:
         # Extract agent_id from solution_id (format: "agent_X_iter_Y")
         if verification.solution_id.startswith("agent_"):
             try:
-                agent_id_str = verification.solution_id.split("_")[1]
+                agent_id_str = verification.solution_id.removeprefix("agent_").rsplit("_iter_", 1)[0]
 
                 # Handle both integer and string agent_ids for backward compatibility
                 for solution in self.solutions:

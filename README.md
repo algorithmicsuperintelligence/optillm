@@ -154,6 +154,25 @@ optillm
 
 ⚠️ **Security Note**: Disabling SSL verification is insecure and should only be used in development. For production environments with custom CAs, use `--ssl-cert-path` instead. See [SSL_CONFIGURATION.md](SSL_CONFIGURATION.md) for details.
 
+## 🔒 URL Fetch Security (readurls plugin)
+
+The `readurls` plugin fetches URLs found in prompts and blocks requests to non-public destinations (private, loopback, link-local, reserved addresses such as the cloud metadata IP `169.254.169.254`) to prevent SSRF. Every redirect hop is re-validated and unresolvable hosts are rejected.
+
+If your deployment intentionally needs to read internal documentation pages, you can explicitly opt out:
+
+```bash
+# Command line
+optillm --readurls-allow-internal
+
+# Environment variable
+export OPTILLM_READURLS_ALLOW_INTERNAL=true
+optillm
+```
+
+⚠️ **Security Note**: Only enable this on trusted networks where internal URL fetching is actually required.
+
+**Known limitation (DNS rebinding)**: the guard validates DNS resolution before each request, but the underlying HTTP client performs a second resolution when it opens the connection, so a domain under attacker control could rebind to an internal address between the two lookups. For high-security deployments, additionally restrict the network egress of the optillm process (firewall or service-mesh policy) instead of relying on this check alone.
+
 ## Implemented techniques
 
 | Approach                             | Slug               | Description                                                                                    |
@@ -359,6 +378,21 @@ response = client.chat.completions.create(
 )
 ```
 
+The server also exposes the legacy text completions endpoint `POST /v1/completions` (returning `object: "text_completion"` responses), so OpenAI-legacy clients work against the inbuilt inference server too:
+
+```bash
+curl http://localhost:8000/v1/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPTILLM_API_KEY" \
+  -d '{
+    "model": "meta-llama/Llama-3.2-1B-Instruct",
+    "prompt": "Write a haiku about recursion.",
+    "max_tokens": 64
+  }'
+```
+
+Streaming (`stream: true`) is not supported on `/v1/completions` yet; use `/v1/chat/completions` for streaming responses.
+
 ### Starting the optillm proxy with an external server (e.g. llama.cpp or ollama)
 
 - Set the `OPENAI_API_KEY` env variable to a placeholder value
@@ -378,7 +412,7 @@ The Model Context Protocol (MCP) plugin enables OptiLLM to connect with MCP serv
 OptiLLM supports both **local** and **remote** MCP servers through multiple transport methods:
 - **stdio**: Local servers (traditional)
 - **SSE**: Remote servers via Server-Sent Events
-- **WebSocket**: Remote servers via WebSocket connections
+- **Streamable HTTP**: Remote servers via the MCP Streamable HTTP transport
 
 #### What is MCP?
 
@@ -450,14 +484,17 @@ The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open 
 }
 ```
 
-**Remote Server (WebSocket) - New Feature:**
+**Remote Server (Streamable HTTP):**
 ```json
 {
   "mcpServers": {
-    "remote-ws": {
-      "transport": "websocket",
-      "url": "wss://api.example.com/mcp",
-      "description": "Remote WebSocket MCP server"
+    "remote-http": {
+      "transport": "streamable_http",
+      "url": "https://api.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${API_TOKEN}"
+      },
+      "description": "Remote Streamable HTTP MCP server"
     }
   },
   "log_level": "INFO"
@@ -483,8 +520,8 @@ The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open 
       "description": "GitHub MCP server"
     },
     "remote-api": {
-      "transport": "websocket",
-      "url": "wss://api.company.com/mcp",
+      "transport": "streamable_http",
+      "url": "https://api.company.com/mcp",
       "description": "Company internal MCP server"
     }
   },
@@ -496,7 +533,7 @@ The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open 
 
 **Common Parameters:**
 - **Server name**: A unique identifier for the server (e.g., "filesystem", "github")
-- **transport**: Transport method - "stdio" (default), "sse", or "websocket"
+- **transport**: Transport method - "stdio" (default), "sse", or "streamable_http"
 - **description** (optional): Description of the server's functionality
 - **timeout** (optional): Connection timeout in seconds (default: 5.0)
 
@@ -510,8 +547,12 @@ The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open 
 - **headers** (optional): HTTP headers for authentication
 - **sse_read_timeout** (optional): SSE read timeout in seconds (default: 300.0)
 
-**websocket Transport (WebSocket):**
-- **url**: The WebSocket endpoint URL
+**streamable_http Transport (Streamable HTTP):**
+- **url**: The MCP endpoint URL
+- **headers** (optional): HTTP headers for authentication
+- **sse_read_timeout** (optional): Read timeout in seconds (default: 300.0)
+
+The `websocket` transport was removed in MCP Python SDK 2.x and is no longer supported; use `streamable_http` or `sse` instead.
 
 **Environment Variable Expansion:**
 Headers and other string values support environment variable expansion using `${VARIABLE_NAME}` syntax. This is especially useful for API keys:
@@ -537,12 +578,12 @@ You can use any of the [official MCP servers](https://modelcontextprotocol.io/ex
 - **SQLite**: `@modelcontextprotocol/server-sqlite` - SQLite database access
 - **Brave Search**: `@modelcontextprotocol/server-brave-search` - Web search capabilities
 
-##### Remote MCP Servers (SSE/WebSocket transport)
+##### Remote MCP Servers (SSE/Streamable HTTP transport)
 
 Remote servers provide centralized access without requiring local installation:
 
 - **GitHub MCP Server**: `https://api.githubcopilot.com/mcp` - Repository management, issue tracking, and code analysis
-- **Third-party servers**: Any MCP server that supports SSE or WebSocket protocols
+- **Third-party servers**: Any MCP server that supports the SSE or Streamable HTTP transports
 
 ##### Example: Comprehensive Configuration
 
@@ -628,7 +669,7 @@ Check this log file for connection issues, tool execution errors, and other diag
 
 2. **Access denied**: For filesystem operations, ensure the paths specified in the configuration are accessible to the process.
 
-**Remote Server Issues (SSE/WebSocket transport):**
+**Remote Server Issues (SSE/Streamable HTTP transport):**
 
 3. **Connection timeout**: Remote servers may take longer to connect. Increase the `timeout` value in your configuration.
 
@@ -642,7 +683,7 @@ Check this log file for connection issues, tool execution errors, and other diag
 
 7. **Method not found**: Some servers don't implement all MCP capabilities (tools, resources, prompts). Verify which capabilities the server supports.
 
-8. **Transport not supported**: Ensure you're using a supported transport: "stdio", "sse", or "websocket".
+8. **Transport not supported**: Ensure you're using a supported transport: "stdio", "sse", or "streamable_http".
 
 **Example: Testing GitHub MCP Connection**
 

@@ -33,11 +33,12 @@ class ProxyConfig:
             return cls._cached_config
             
         if not path:
-            # Priority order for config files
+            # Priority order for config files. The bundled example_config.yaml
+            # is deliberately not used: its sample providers would silently
+            # receive traffic meant for the user's own endpoints.
             config_locations = [
                 Path.home() / ".optillm" / "proxy_config.yaml",
                 Path.home() / ".optillm" / "proxy_config.yml",
-                Path(__file__).parent / "example_config.yaml",
             ]
             
             for config_path in config_locations:
@@ -152,7 +153,6 @@ class ProxyConfig:
         
         # Monitoring defaults
         monitoring = config['monitoring']
-        monitoring.setdefault('log_level', 'INFO')
         monitoring.setdefault('track_latency', True)
         monitoring.setdefault('track_errors', True)
         
@@ -253,7 +253,7 @@ queue:
   timeout: 60          # Maximum time in queue (seconds)
 
 monitoring:
-  log_level: INFO
+  # log_level: DEBUG  # Overrides the server --log level for proxy logs
   track_latency: true
   track_errors: true
 
@@ -281,7 +281,6 @@ monitoring:
                 'timeout': 60
             },
             'monitoring': {
-                'log_level': 'INFO',
                 'track_latency': False,
                 'track_errors': True
             }

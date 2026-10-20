@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "optillm"
-version = "0.3.22"
+version = "0.4.0"
 description = "An optimizing inference proxy for LLMs."
 readme = "README.md"
 license = "Apache-2.0"
@@ -48,7 +48,7 @@ dependencies = [
     "cerebras_cloud_sdk",
     "outlines[transformers]>=1.2.3",
     "sentencepiece",
-    "mcp",
+    "mcp>=2,<3",
     "adaptive-classifier",
     "datasets",
     "math-verify",

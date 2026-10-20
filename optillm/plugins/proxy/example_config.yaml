@@ -61,7 +61,7 @@ routing:
 
 # Monitoring and logging
 monitoring:
-  log_level: INFO  # DEBUG, INFO, WARNING, ERROR
+  # log_level: DEBUG  # Overrides the server --log level for proxy logs
   track_latency: true  # Track request latencies
   track_errors: true   # Track and log errors
 

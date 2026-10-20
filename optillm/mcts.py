@@ -44,12 +44,10 @@ class MCTS:
 
     def select(self, node: MCTSNode) -> MCTSNode:
         logger.debug(f"Selecting node. Current node visits: {node.visits}, value: {node.value}")
-        if not node.children:
-            logger.debug("Node has no children. Returning current node.")
-            return node
-        selected_node = max(node.children, key=lambda c: c.value / (c.visits + 1e-8) + self.exploration_weight * np.sqrt(np.log(node.visits + 1) / (c.visits + 1e-8)))
-        logger.debug(f"Selected child node. Visits: {selected_node.visits}, Value: {selected_node.value}")
-        return selected_node
+        while node.children:
+            node = max(node.children, key=lambda c: c.value / (c.visits + 1e-8) + self.exploration_weight * np.sqrt(np.log(node.visits + 1) / (c.visits + 1e-8)))
+            logger.debug(f"Selected child node. Visits: {node.visits}, Value: {node.value}")
+        return node
 
     def expand(self, node: MCTSNode) -> MCTSNode:
         logger.debug(f"Expanding node. Current state: {node.state}")

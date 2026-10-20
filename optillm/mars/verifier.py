@@ -178,9 +178,11 @@ class MARSVerifier:
             ]
         }
 
-    def _select_verifier_agent(self, solution_agent_id: int) -> MARSAgent:
+    def _select_verifier_agent(self, solution_agent_id: str | int) -> MARSAgent:
         """Select an agent different from the solution creator for verification"""
-        available_agents = [agent for agent in self.agents if agent.agent_id != solution_agent_id]
+        # Solutions store string IDs, while the reasoning agents use integers.
+        solution_agent_id = str(solution_agent_id)
+        available_agents = [agent for agent in self.agents if str(agent.agent_id) != solution_agent_id]
         if not available_agents:
             # If no other agents available, use any agent
             available_agents = self.agents
@@ -188,7 +190,7 @@ class MARSVerifier:
         # Prefer agents with different temperatures for diverse verification
         if len(available_agents) > 1:
             # Select agent with most different temperature
-            solution_agent = next((a for a in self.agents if a.agent_id == solution_agent_id), None)
+            solution_agent = next((a for a in self.agents if str(a.agent_id) == solution_agent_id), None)
             if solution_agent:
                 solution_temp = solution_agent.temperature
                 available_agents.sort(key=lambda a: abs(a.temperature - solution_temp), reverse=True)
@@ -215,7 +217,7 @@ class MARSVerifier:
 
                 if latest_verification['assessment'] in ['INCORRECT', 'INCOMPLETE']:
                     # Find the original agent to improve their solution
-                    original_agent = next((a for a in self.agents if a.agent_id == solution.agent_id), None)
+                    original_agent = next((a for a in self.agents if str(a.agent_id) == str(solution.agent_id)), None)
 
                     if original_agent:
                         try:
@@ -267,7 +269,7 @@ class MARSVerifier:
             if solution.verification_results:
                 latest_verification = solution.verification_results[-1]
                 if latest_verification['assessment'] in ['INCORRECT', 'INCOMPLETE']:
-                    original_agent = next((a for a in self.agents if a.agent_id == solution.agent_id), None)
+                    original_agent = next((a for a in self.agents if str(a.agent_id) == str(solution.agent_id)), None)
                     if original_agent:
                         improvable_solutions.append((solution, original_agent, latest_verification))
 

@@ -15,6 +15,66 @@ from optillm import conversation_logger
 class TimeoutException(Exception):
     pass
 
+# Modules the solver contract allows: the system prompt promises the generated
+# code only uses Z3/SymPy (plus basic stdlib math helpers), and these are
+# exactly the modules execute_code_in_process() makes available.
+_ALLOWED_SOLVER_IMPORTS = {'z3', 'sympy', 'math', 'itertools', 'fractions'}
+
+# Calls that provide arbitrary execution or file/IO access, or that reach the
+# same denied attributes through string arguments (getattr/setattr/delattr);
+# the declared solver subset has no use for any of them.
+_DENIED_SOLVER_CALLS = {
+    'eval', 'exec', 'compile', '__import__', 'open', 'input', 'breakpoint',
+    'globals', 'locals', 'vars', 'getattr', 'setattr', 'delattr',
+}
+
+# Dunder attributes used in classic module-object traversal escapes (e.g.
+# z3.__loader__, ().__class__.__bases__[0].__subclasses__()). __dict__ and
+# __getattribute__ are denied because they turn every other denied attribute
+# into a string lookup (z3.__dict__['__loader__'],
+# z3.__getattribute__('__spec__')), and a module's __dict__ exposes its real
+# __builtins__. A fixed denylist instead of banning every dunder so legitimate
+# solver code that touches z3/sympy internals by name is not rejected.
+_DENIED_SOLVER_ATTRS = {
+    '__class__', '__bases__', '__subclasses__', '__mro__', '__globals__',
+    '__builtins__', '__init__', '__code__', '__closure__', '__loader__',
+    '__spec__', '__import__', '__reduce__', '__dict__', '__getattribute__',
+    '__getattr__', '__setattr__', '__delattr__',
+}
+
+def _validate_solver_ast(tree: ast.AST) -> None:
+    """Statically reject solver code that leaves the declared solver subset.
+
+    The system prompt in analyze_query() promises the generated code will not
+    import anything beyond Z3/SymPy/math; this makes that documented contract
+    enforceable before the code reaches exec(). This is defense-in-depth, NOT
+    a sandbox.
+
+    Raises ValueError listing every violation found.
+    """
+    violations = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root = alias.name.split('.')[0]
+                if root not in _ALLOWED_SOLVER_IMPORTS:
+                    violations.append(
+                        f"import of '{alias.name}' (allowed modules: {sorted(_ALLOWED_SOLVER_IMPORTS)})")
+        elif isinstance(node, ast.ImportFrom):
+            root = (node.module or '').split('.')[0]
+            if root not in _ALLOWED_SOLVER_IMPORTS:
+                violations.append(
+                    f"import from '{node.module}' (allowed modules: {sorted(_ALLOWED_SOLVER_IMPORTS)})")
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+                and node.func.id in _DENIED_SOLVER_CALLS:
+            violations.append(f"call to '{node.func.id}()'")
+        elif isinstance(node, ast.Attribute) and node.attr in _DENIED_SOLVER_ATTRS:
+            violations.append(f"access to attribute '{node.attr}'")
+
+    if violations:
+        raise ValueError(
+            "solver code rejected by static safety check: " + "; ".join(violations))
+
 def prepare_execution_globals():
     """
     Prepare globals dictionary for Z3/SymPy code execution.
@@ -22,7 +82,10 @@ def prepare_execution_globals():
     WARNING: This is NOT a security sandbox. The name "execution_globals" reflects
     that this simply provides the execution environment for solver code, not a
     security boundary. The code is executed via exec() with access to z3, sympy,
-    and math libraries. Only execute trusted code.
+    and math libraries. Only execute trusted code. A static AST gate
+    (_validate_solver_ast) additionally rejects code that leaves the declared
+    solver subset before it reaches this environment; this is defense-in-depth,
+    not a sandbox.
     """
     execution_globals = {
         'print': print,
@@ -273,7 +336,21 @@ Response:
     def extract_and_validate_expressions(self, analysis: str) -> str:
         formulation = re.search(r"```python\n([\s\S]+?)```", analysis)
         if formulation:
-            return formulation.group(1).strip()
+            code = formulation.group(1).strip()
+            # Static gate: enforce the "z3/sympy only" contract promised in the
+            # analysis prompt before the code can reach exec(). Raise (instead of
+            # returning an "Error:" string) so rejected code never enters the
+            # fix-up loop in solve_with_z3_sympy(); process_query catches this
+            # and degrades to standard inference. Syntax errors are left to the
+            # existing execution-time handling, which feeds them back for a
+            # corrected formulation.
+            try:
+                tree = ast.parse(code)
+            except SyntaxError:
+                tree = None
+            if tree is not None:
+                _validate_solver_ast(tree)
+            return code
         raise ValueError("No valid Z3 or SymPy formulation found in the analysis.")
 
     def solve_with_z3_sympy(self, formulation: str, max_attempts: int = 3) -> Dict[str, Any]:

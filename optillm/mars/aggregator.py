@@ -148,7 +148,7 @@ class MARSAggregator:
 
                 sample = []
                 for agent_solutions in by_agent.values():
-                    if sample and len(sample) < self.aggregation_size:
+                    if len(sample) < self.aggregation_size:
                         sample.append(max(agent_solutions, key=lambda s: s.confidence))
                     if len(sample) >= self.aggregation_size:
                         break

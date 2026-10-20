@@ -2,11 +2,57 @@ import re
 from typing import Tuple, List, Optional
 import requests
 import os
+import ipaddress
+import socket
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 from optillm import __version__, server_config
 
 SLUG = "readurls"
+
+# Redirect statuses followed manually so each hop can be re-checked by the
+# SSRF guard before the next request is issued
+REDIRECT_STATUS_CODES = frozenset((301, 302, 303, 307, 308))
+MAX_REDIRECTS = 5
+
+
+def _is_blocked_host(url: str) -> bool:
+    """
+    SSRF guard: return True when the URL does not point at a globally
+    reachable public address (loopback, private, link-local, reserved,
+    CGNAT/shared space, multicast or unspecified), or when the host cannot
+    be resolved (fail-closed).
+
+    Known limitation (DNS rebinding): the host is resolved here and the HTTP
+    client performs a second resolution when it opens the connection, so a
+    domain under attacker control could rebind to an internal address between
+    the two lookups. For high-security deployments, additionally restrict the
+    network egress of the optillm process instead of relying on this check
+    alone.
+    """
+    try:
+        hostname = urlparse(url).hostname
+        if not hostname:
+            return True
+
+        # Resolve all addresses for the host and block the URL if any of
+        # them is non-public
+        addr_infos = socket.getaddrinfo(hostname, None)
+        if not addr_infos:
+            # No resolution results: fail closed
+            return True
+        for addr_info in addr_infos:
+            ip = ipaddress.ip_address(addr_info[4][0])
+            # ipaddress marks globally-routable multicast ranges as global,
+            # so multicast must be blocked explicitly. CGNAT/shared space
+            # (100.64.0.0/10, e.g. Tailscale) is not in the classic private
+            # ranges but is not globally routable either.
+            if ip.is_multicast or not ip.is_global:
+                return True
+        return False
+    except (OSError, ValueError, UnicodeError):
+        # Unresolvable or malformed hosts are blocked
+        return True
 
 def extract_urls(text: str) -> List[str]:
     # Updated regex pattern to be more precise
@@ -44,7 +90,27 @@ def fetch_webpage_content(url: str, max_length: int = 100000, verify_ssl: Option
         else:
             verify = True
 
-        response = requests.get(url, headers=headers, timeout=10, verify=verify)
+        # SSRF guard: resolve the host and refuse non-public destinations
+        # before fetching. Redirects are followed manually so every hop is
+        # re-checked, closing the bypass where a public URL redirects to an
+        # internal address. Operators can explicitly allow internal fetches
+        # via server_config['readurls_allow_internal'].
+        allow_internal = server_config.get('readurls_allow_internal', False)
+        current_url = url
+        response = None
+        for _ in range(MAX_REDIRECTS + 1):
+            if not allow_internal and _is_blocked_host(current_url):
+                return "Error fetching content: blocked non-public URL"
+            response = requests.get(current_url, headers=headers, timeout=10, verify=verify, allow_redirects=False)
+            if response.status_code not in REDIRECT_STATUS_CODES:
+                break
+            location = response.headers.get('Location')
+            if not location:
+                break
+            current_url = urljoin(current_url, location)
+
+        if response.status_code in REDIRECT_STATUS_CODES:
+            return "Error fetching content: too many redirects"
         response.raise_for_status()
         
         # Make a soup 

@@ -9,6 +9,7 @@ import os
 import json
 import logging
 import asyncio
+import contextlib
 import sys
 import time
 import re
@@ -22,9 +23,16 @@ import traceback
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
-from mcp.client.websocket import websocket_client
+from mcp.client.streamable_http import streamable_http_client, create_mcp_http_client
 import mcp.types as types
-from mcp.shared.exceptions import McpError
+from mcp.shared.exceptions import MCPError
+import httpx2
+
+# Transport names accepted in mcp_config.json for Streamable HTTP servers
+STREAMABLE_HTTP_TRANSPORTS = ("streamable_http", "streamable-http", "http")
+# The WebSocket client transport was removed in mcp 2.x
+WEBSOCKET_REMOVED_ERROR = ("WebSocket transport is no longer supported (removed in mcp 2.x); "
+                           "use \"streamable_http\" or \"sse\" instead")
 
 # Configure logging
 LOG_DIR = Path.home() / ".optillm" / "logs"
@@ -118,14 +126,14 @@ def find_executable(cmd: str) -> Optional[str]:
 @dataclass
 class ServerConfig:
     """Configuration for a single MCP server"""
-    # Transport type: "stdio" (default), "sse", or "websocket"
+    # Transport type: "stdio" (default), "sse", or "streamable_http"
     transport: str = "stdio"
 
     # For stdio transport
     command: Optional[str] = None
     args: List[str] = None
 
-    # For remote transports (SSE/WebSocket)
+    # For remote transports (SSE/Streamable HTTP)
     url: Optional[str] = None
     headers: Dict[str, str] = None
 
@@ -228,14 +236,22 @@ class MCPConfigManager:
             logger.error(f"Error creating default configuration: {e}")
             return False
 
+def _dump_params(message: Any) -> Any:
+    """Return a message's params as plain data for logging"""
+    params = getattr(message, "params", None)
+    if hasattr(params, "model_dump"):
+        return params.model_dump(mode="json", by_alias=True, exclude_none=True)
+    return params
+
 # Create a custom ClientSession that logs all communication
 class LoggingClientSession(ClientSession):
     """A ClientSession that logs all communication"""
     
     async def send_request(self, *args, **kwargs):
         """Log and forward requests"""
-        method = args[0]
-        params = args[1] if len(args) > 1 else None
+        request = args[0]
+        method = getattr(request, "method", request)
+        params = _dump_params(request)
         log_mcp_message("REQUEST", method, params)
         
         try:
@@ -248,8 +264,9 @@ class LoggingClientSession(ClientSession):
     
     async def send_notification(self, *args, **kwargs):
         """Log and forward notifications"""
-        method = args[0]
-        params = args[1] if len(args) > 1 else None
+        notification = args[0]
+        method = getattr(notification, "method", notification)
+        params = _dump_params(notification)
         log_mcp_message("NOTIFICATION", method, params)
         
         try:
@@ -257,6 +274,33 @@ class LoggingClientSession(ClientSession):
         except Exception as e:
             log_mcp_message("ERROR", method, error=str(e))
             raise
+
+def expand_headers(headers: Dict[str, str]) -> Dict[str, str]:
+    """Expand ${ENV_VAR} header values from the environment"""
+    expanded_headers = {}
+    for key, value in headers.items():
+        if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
+            env_var = value[2:-1]
+            expanded_value = os.environ.get(env_var)
+            if expanded_value:
+                expanded_headers[key] = expanded_value
+            else:
+                logger.warning(f"Environment variable {env_var} not found for header {key}")
+        else:
+            expanded_headers[key] = value
+    return expanded_headers
+
+@contextlib.asynccontextmanager
+async def _streamable_http_session(config: ServerConfig):
+    """Open a logging client session over Streamable HTTP with the configured headers and timeouts"""
+    http_client = create_mcp_http_client(
+        headers=expand_headers(config.headers),
+        timeout=httpx2.Timeout(config.timeout, read=config.sse_read_timeout),
+    )
+    async with http_client:
+        async with streamable_http_client(config.url, http_client=http_client) as (read_stream, write_stream):
+            async with LoggingClientSession(read_stream, write_stream) as session:
+                yield session
 
 class MCPServer:
     """Represents a connection to an MCP server"""
@@ -287,7 +331,7 @@ class MCPServer:
             server_capabilities = result.capabilities
 
             # Discover tools if supported
-            if hasattr(server_capabilities, "tools"):
+            if getattr(server_capabilities, "tools", None) is not None:
                 self.has_tools_capability = True
                 logger.info(f"Discovering tools for {self.server_name}")
                 try:
@@ -295,11 +339,11 @@ class MCPServer:
                     self.tools = tools_result.tools
                     logger.info(f"Found {len(self.tools)} tools")
                     logger.debug(f"Tools details: {[t.name for t in self.tools]}")
-                except McpError as e:
+                except MCPError as e:
                     logger.warning(f"Failed to list tools: {e}")
 
             # Discover resources if supported
-            if hasattr(server_capabilities, "resources"):
+            if getattr(server_capabilities, "resources", None) is not None:
                 self.has_resources_capability = True
                 logger.info(f"Discovering resources for {self.server_name}")
                 try:
@@ -307,11 +351,11 @@ class MCPServer:
                     self.resources = resources_result.resources
                     logger.info(f"Found {len(self.resources)} resources")
                     logger.debug(f"Resources details: {[r.uri for r in self.resources]}")
-                except McpError as e:
+                except MCPError as e:
                     logger.warning(f"Failed to list resources: {e}")
 
             # Discover prompts if supported
-            if hasattr(server_capabilities, "prompts"):
+            if getattr(server_capabilities, "prompts", None) is not None:
                 self.has_prompts_capability = True
                 logger.info(f"Discovering prompts for {self.server_name}")
                 try:
@@ -319,7 +363,7 @@ class MCPServer:
                     self.prompts = prompts_result.prompts
                     logger.info(f"Found {len(self.prompts)} prompts")
                     logger.debug(f"Prompts details: {[p.name for p in self.prompts]}")
-                except McpError as e:
+                except MCPError as e:
                     logger.warning(f"Failed to list prompts: {e}")
 
             logger.info(f"Server {self.server_name} capabilities: "
@@ -329,6 +373,24 @@ class MCPServer:
 
         except Exception as e:
             logger.error(f"Error during stdio session: {e}")
+            logger.error(traceback.format_exc())
+            return False
+
+    async def connect_streamable_http(self) -> bool:
+        """Connect to server using Streamable HTTP transport and discover capabilities"""
+        logger.info(f"Connecting to Streamable HTTP server: {self.server_name}")
+        logger.debug(f"Streamable HTTP URL: {self.config.url}")
+
+        if not self.config.url:
+            logger.error(f"Streamable HTTP transport requires URL for server {self.server_name}")
+            return False
+
+        try:
+            async with _streamable_http_session(self.config) as session:
+                return await self.connect_stdio(session)
+
+        except Exception as e:
+            logger.error(f"Error connecting to Streamable HTTP server {self.server_name}: {e}")
             logger.error(traceback.format_exc())
             return False
 
@@ -343,18 +405,7 @@ class MCPServer:
             return False
 
         try:
-            # Expand environment variables in headers
-            expanded_headers = {}
-            for key, value in self.config.headers.items():
-                if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
-                    env_var = value[2:-1]
-                    expanded_value = os.environ.get(env_var)
-                    if expanded_value:
-                        expanded_headers[key] = expanded_value
-                    else:
-                        logger.warning(f"Environment variable {env_var} not found for header {key}")
-                else:
-                    expanded_headers[key] = value
+            expanded_headers = expand_headers(self.config.headers)
 
             async with sse_client(
                 url=self.config.url,
@@ -379,15 +430,8 @@ class MCPServer:
             logger.error(f"WebSocket transport requires URL for server {self.server_name}")
             return False
 
-        try:
-            async with websocket_client(self.config.url) as (read_stream, write_stream):
-                async with LoggingClientSession(read_stream, write_stream) as session:
-                    return await self.connect_stdio(session)
-
-        except Exception as e:
-            logger.error(f"Error connecting to WebSocket server {self.server_name}: {e}")
-            logger.error(traceback.format_exc())
-            return False
+        logger.error(f"Server {self.server_name}: {WEBSOCKET_REMOVED_ERROR}")
+        return False
 
     async def connect_stdio_native(self) -> bool:
         """Connect using stdio transport with local executable"""
@@ -479,6 +523,8 @@ class MCPServer:
                 success = await self.connect_stdio_native()
             elif self.config.transport == "sse":
                 success = await self.connect_sse()
+            elif self.config.transport in STREAMABLE_HTTP_TRANSPORTS:
+                success = await self.connect_streamable_http()
             elif self.config.transport == "websocket":
                 success = await self.connect_websocket()
             else:
@@ -532,7 +578,7 @@ class MCPServerManager:
                         "server": server_name,
                         "name": tool.name,
                         "description": tool.description,
-                        "input_schema": tool.inputSchema
+                        "input_schema": tool.input_schema
                     }
                     self.all_tools.append(tool_info)
                     logger.debug(f"Cached tool: {tool_info}")
@@ -634,6 +680,10 @@ async def execute_tool_with_session(session: LoggingClientSession, tool_name: st
         logger.info(f"Calling tool {tool_name} with arguments: {arguments}")
         result = await session.call_tool(tool_name, arguments)
 
+        if not isinstance(result, types.CallToolResult):
+            # e.g. InputRequiredResult: the tool needs interactive input we can't provide
+            return {"error": f"Tool {tool_name} returned an unsupported result type: {type(result).__name__}"}
+
         # Process the result
         content_results = []
         for content in result.content:
@@ -647,13 +697,13 @@ async def execute_tool_with_session(session: LoggingClientSession, tool_name: st
                 content_results.append({
                     "type": "image",
                     "data": content.data,
-                    "mimeType": content.mimeType
+                    "mimeType": content.mime_type
                 })
-                logger.debug(f"Tool result (image): {content.mimeType}")
+                logger.debug(f"Tool result (image): {content.mime_type}")
 
         return {
             "result": content_results,
-            "is_error": result.isError
+            "is_error": result.is_error
         }
 
     except Exception as e:
@@ -692,6 +742,8 @@ async def execute_tool(server_name: str, tool_name: str, arguments: Dict[str, An
             return await execute_tool_stdio(server_config, tool_name, arguments)
         elif server_config.transport == "sse":
             return await execute_tool_sse(server_config, tool_name, arguments)
+        elif server_config.transport in STREAMABLE_HTTP_TRANSPORTS:
+            return await execute_tool_streamable_http(server_config, tool_name, arguments)
         elif server_config.transport == "websocket":
             return await execute_tool_websocket(server_config, tool_name, arguments)
         else:
@@ -745,18 +797,7 @@ async def execute_tool_sse(server_config: ServerConfig, tool_name: str, argument
         return {"error": "SSE transport requires URL"}
 
     try:
-        # Expand environment variables in headers
-        expanded_headers = {}
-        for key, value in server_config.headers.items():
-            if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
-                env_var = value[2:-1]
-                expanded_value = os.environ.get(env_var)
-                if expanded_value:
-                    expanded_headers[key] = expanded_value
-                else:
-                    logger.warning(f"Environment variable {env_var} not found for header {key}")
-            else:
-                expanded_headers[key] = value
+        expanded_headers = expand_headers(server_config.headers)
 
         logger.debug(f"  URL: {server_config.url}")
         logger.debug(f"  Headers: {list(expanded_headers.keys())}")
@@ -780,17 +821,23 @@ async def execute_tool_websocket(server_config: ServerConfig, tool_name: str, ar
     if not server_config.url:
         return {"error": "WebSocket transport requires URL"}
 
+    return {"error": WEBSOCKET_REMOVED_ERROR}
+
+async def execute_tool_streamable_http(server_config: ServerConfig, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute tool using Streamable HTTP transport"""
+    if not server_config.url:
+        return {"error": "Streamable HTTP transport requires URL"}
+
     try:
         logger.debug(f"  URL: {server_config.url}")
 
-        async with websocket_client(server_config.url) as (read_stream, write_stream):
-            async with LoggingClientSession(read_stream, write_stream) as session:
-                return await execute_tool_with_session(session, tool_name, arguments)
+        async with _streamable_http_session(server_config) as session:
+            return await execute_tool_with_session(session, tool_name, arguments)
 
     except Exception as e:
-        logger.error(f"Error with WebSocket tool execution: {e}")
+        logger.error(f"Error with Streamable HTTP tool execution: {e}")
         logger.error(traceback.format_exc())
-        return {"error": f"Error executing tool via WebSocket: {str(e)}"}
+        return {"error": f"Error executing tool via Streamable HTTP: {str(e)}"}
 
 async def run(system_prompt: str, initial_query: str, client, model: str) -> Tuple[str, int]:
     """

@@ -6,11 +6,7 @@ import logging
 from typing import List, Optional
 from abc import ABC, abstractmethod
 
-# Configure logging for this module
 logger = logging.getLogger(__name__)
-# Ensure we show debug messages
-logging.basicConfig()
-logger.setLevel(logging.DEBUG)
 
 class Router(ABC):
     """Abstract base class for routing strategies"""
