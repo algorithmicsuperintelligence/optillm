@@ -63,16 +63,16 @@ def _sample(logits: torch.Tensor, temperature=0.666, top_p=0.90, top_k=27, min_p
     probs = F.softmax(logit / temperature, dim=-1)
 
     if min_p > 0.0:
+        # Drop tokens below min_p times the most likely token's probability
         p_max = torch.max(probs, dim=-1, keepdim=True).values
-        indices_to_remove = probs < (min_p * p_max)
-        logit = torch.where(indices_to_remove, torch.full_like(logit, float('-inf')), logit)
+        probs = probs.masked_fill(probs < (min_p * p_max), 0.0)
 
-    top_k_probs, top_k_indices = torch.topk(probs, k=min(top_k, probs.shape[-1]))
-    probs_sort = torch.flip(top_k_probs, dims=[-1])
-    probs_idx = torch.flip(top_k_indices, dims=[-1])
+    # Nucleus over the top-k tokens in descending order: keep each token until
+    # the probability of the tokens before it exceeds top_p, which always
+    # keeps the most likely token and removes the least likely tail.
+    probs_sort, probs_idx = torch.topk(probs, k=min(top_k, probs.shape[-1]))
     probs_sum = torch.cumsum(probs_sort, dim=-1)
-    mask = torch.where(probs_sum - probs_sort > top_p, torch.tensor(1.0, device=device), torch.tensor(0.0, device=device))
-    probs_sort = probs_sort * (1 - mask)
+    probs_sort = probs_sort.masked_fill(probs_sum - probs_sort > top_p, 0.0)
     probs_sort = probs_sort / torch.sum(probs_sort, dim=-1, keepdim=True)
     next_token = torch.multinomial(probs_sort, 1, generator=generator)
     next_token_g = torch.gather(probs_idx, -1, next_token.reshape(bsz, 1).to(torch.int64))
