@@ -133,6 +133,21 @@ class ConfidenceCalculator:
             return 0.0
         return np.mean(self.token_confidences)
     
+    def _trace_group_confidences(self) -> List[float]:
+        """
+        Group confidences of the whole trace. A trace shorter than the window
+        forms a single group of all its tokens, as in the DeepConf reference
+        implementation, rather than having no groups at all.
+
+        Returns:
+            List of group confidences (empty only for an empty trace)
+        """
+        if self.group_confidences:
+            return self.group_confidences
+        if self.token_confidences:
+            return [float(np.mean(self.token_confidences))]
+        return []
+
     def get_bottom_10_percent_confidence(self) -> float:
         """
         Calculate average confidence of bottom 10% groups.
@@ -140,11 +155,12 @@ class ConfidenceCalculator:
         Returns:
             Bottom 10% group confidence
         """
-        if not self.group_confidences:
+        group_confidences = self._trace_group_confidences()
+        if not group_confidences:
             return 0.0
             
-        num_bottom = max(1, len(self.group_confidences) // 10)
-        sorted_confidences = sorted(self.group_confidences)
+        num_bottom = max(1, len(group_confidences) // 10)
+        sorted_confidences = sorted(group_confidences)
         bottom_confidences = sorted_confidences[:num_bottom]
         
         return np.mean(bottom_confidences)
@@ -156,9 +172,10 @@ class ConfidenceCalculator:
         Returns:
             Lowest group confidence
         """
-        if not self.group_confidences:
+        group_confidences = self._trace_group_confidences()
+        if not group_confidences:
             return 0.0
-        return min(self.group_confidences)
+        return min(group_confidences)
     
     def get_trace_statistics(self) -> Dict[str, float]:
         """

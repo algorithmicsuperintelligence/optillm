@@ -31,7 +31,7 @@ DEFAULT_CONFIG = {
     "min_trace_length": 100,     # Minimum tokens before termination allowed
     "max_tokens_per_trace": 4096,  # Maximum tokens per individual trace
     "temperature": 0.7,          # Generation temperature
-    "confidence_metric": "average_confidence",  # Metric for threshold calculation
+    "confidence_metric": "lowest_group",  # Metric for threshold and voting weights
     "include_stats": False,      # Include debugging statistics in response
 }
 
@@ -242,6 +242,9 @@ class DeepConfProcessor:
         if not traces:
             return "", {}
         
+        # Early-terminated traces were cut off mid-reasoning, so they don't vote
+        traces = [trace for trace in traces if not trace.terminated_early] or traces
+
         # Group traces by answer and calculate weighted scores
         answer_groups = defaultdict(list)
         for trace in traces:
@@ -251,17 +254,14 @@ class DeepConfProcessor:
                 answer = trace.text.strip()[-50:].strip()
             answer_groups[answer].append(trace)
         
-        # Calculate weighted scores for each answer
-        answer_scores = {}
-        for answer, group_traces in answer_groups.items():
-            # Weight by average confidence
-            confidences = [trace.confidence_stats['average_confidence'] for trace in group_traces]
-            weighted_score = sum(confidences) / len(confidences)  # Average confidence
-            count_weight = len(group_traces) / len(traces)  # Frequency weight
-            
-            # Combine confidence and frequency
-            final_score = weighted_score * 0.7 + count_weight * 0.3
-            answer_scores[answer] = final_score
+        # Each answer scores the sum of its traces' confidences (DeepConf's
+        # confidence-weighted majority vote), so agreement and confidence
+        # both count
+        metric = self.config["confidence_metric"]
+        answer_scores = {
+            answer: sum(trace.confidence_stats[metric] for trace in group_traces)
+            for answer, group_traces in answer_groups.items()
+        }
         
         # Select best answer
         best_answer = max(answer_scores.keys(), key=lambda x: answer_scores[x])
@@ -315,8 +315,16 @@ class DeepConfProcessor:
                            f"(ratio: {consensus_ratio:.3f})")
                 break
         
-        # Phase 3: Final answer selection
-        final_answer, voting_stats = self.weighted_majority_vote(all_traces)
+        # Phase 3: Final answer selection. As in the DeepConf reference
+        # implementation, warmup traces vote only if they pass the threshold.
+        metric = self.config["confidence_metric"]
+        voting_traces = [
+            trace for trace in self.warmup_traces
+            if trace.confidence_stats[metric] >= self.confidence_threshold
+        ] + self.online_traces
+        final_answer, voting_stats = self.weighted_majority_vote(
+            voting_traces or all_traces
+        )
         
         # Compile processing statistics
         processing_stats = {

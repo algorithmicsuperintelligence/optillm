@@ -161,6 +161,61 @@ def test_info_function():
         logger.error(f"✗ Info function test failed: {e}")
         return False
 
+def _trace(text, confidence, terminated_early=False):
+    from optillm.deepconf.processor import TraceResult
+
+    stats = {
+        "average_confidence": confidence,
+        "bottom_10_percent": confidence,
+        "lowest_group": confidence,
+    }
+    trace = TraceResult([], text, stats)
+    trace.terminated_early = terminated_early
+    return trace
+
+def _processor():
+    from unittest.mock import Mock
+    from optillm.deepconf.processor import DeepConfProcessor
+
+    return DeepConfProcessor(Mock(), Mock())
+
+def test_short_trace_group_confidence():
+    """A trace shorter than the window is one group of all its tokens."""
+    import torch
+    from optillm.deepconf.confidence import ConfidenceCalculator
+
+    calculator = ConfidenceCalculator(window_size=2048, top_k=5)
+    for _ in range(50):
+        calculator.add_token_confidence(torch.randn(1000))
+    stats = calculator.get_trace_statistics()
+
+    assert stats["num_groups"] == 0
+    assert stats["lowest_group"] == stats["average_confidence"] > 0
+    assert stats["bottom_10_percent"] == stats["average_confidence"]
+    return True
+
+def test_weighted_vote_sums_confidences():
+    """Each answer scores the sum of its traces' confidences, so many agreeing
+    traces outvote one slightly more confident trace."""
+    traces = [_trace("The answer is 42", 9.0) for _ in range(15)]
+    traces.append(_trace("The answer is 7", 9.5))
+
+    answer, stats = _processor().weighted_majority_vote(traces)
+
+    assert answer == "The answer is 42"
+    assert abs(stats["best_score"] - 15 * 9.0) < 1e-9
+    return True
+
+def test_weighted_vote_skips_early_terminated_traces():
+    """Traces cut off by early termination are unfinished and don't vote."""
+    traces = [_trace("The answer is 42", 9.0) for _ in range(3)]
+    traces += [_trace("The answer is 7 because", 9.0, True) for _ in range(4)]
+
+    answer, _ = _processor().weighted_majority_vote(traces)
+
+    assert answer == "The answer is 42"
+    return True
+
 def main():
     """Run all tests."""
     logger.info("Starting DeepConf test suite...")
@@ -170,7 +225,10 @@ def main():
         test_confidence_calculator, 
         test_threshold_calibrator,
         test_config_validation,
-        test_info_function
+        test_info_function,
+        test_short_trace_group_confidence,
+        test_weighted_vote_sums_confidences,
+        test_weighted_vote_skips_early_terminated_traces,
     ]
     
     passed = 0
