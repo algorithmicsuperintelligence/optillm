@@ -70,7 +70,7 @@ print(response.choices[0].message.content)
 | `top_k` | `5` | Number of top tokens for confidence calculation |
 | `min_trace_length` | `100` | Minimum tokens before allowing early termination |
 | `max_tokens_per_trace` | `4096` | Maximum tokens per individual trace |
-| `confidence_metric` | `"average_confidence"` | Metric used for threshold calculation |
+| `confidence_metric` | `"lowest_group"` | Trace confidence used for the threshold and as voting weight (`"lowest_group"`, `"bottom_10_percent"` or `"average_confidence"`) |
 | `include_stats` | `false` | Include processing statistics in response |
 
 ### Advanced Usage
