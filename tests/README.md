@@ -88,7 +88,7 @@ The GitHub Actions workflow (`.github/workflows/test.yml`) runs:
 To keep CI fast and reliable:
 - Unit tests don't require model inference or a running server
 - Integration tests only run with real API keys when available
-- The main `test.py` is kept in the root for comprehensive local testing
+- The main `tests/test.py` is used for comprehensive local testing
 - For CI, we use simplified tests that verify structure and imports
 
 ## Writing New Tests
