@@ -217,6 +217,7 @@ optillm
 | Web Search              | `web_search`       | Performs Google searches using Chrome automation (Selenium) to gather search results and URLs |
 | [Deep Research](optillm/plugins/deep_research)           | `deep_research`    | Implements Test-Time Diffusion Deep Researcher (TTD-DR) for comprehensive research reports using iterative refinement |
 | [Proxy](optillm/plugins/proxy)      | `proxy`            | Load balancing and failover across multiple LLM providers with health monitoring and round-robin routing |
+| [Streaming Hints](optillm/plugins/streaming_hints) | `streaming_hints` | Watches the reasoning as it is generated and injects relevant hints from a memory bank at moments of uncertainty |
 
 We support all major LLM providers and models for inference. You need to set the correct environment variable and the proxy will pick the corresponding client.
 

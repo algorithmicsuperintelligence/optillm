@@ -86,6 +86,7 @@ optillm = [
     "plugins/proxy/*.py",
     "plugins/proxy/*.yaml",
     "plugins/proxy/*.md",
+    "plugins/streaming_hints/*.json",
     "cepo/*.py",
     "cepo/configs/*.yaml",
 ]

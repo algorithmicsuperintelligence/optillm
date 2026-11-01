@@ -33,7 +33,8 @@ def test_plugin_module_imports():
         'optillm.plugins.spl_plugin',
         'optillm.plugins.proxy_plugin',
         'optillm.plugins.mcp_plugin',
-        'optillm.plugins.compact_plugin'
+        'optillm.plugins.compact_plugin',
+        'optillm.plugins.streaming_hints_plugin'
     ]
     
     for module_name in plugin_modules:
@@ -54,7 +55,7 @@ def test_plugin_approach_detection():
     load_plugins()
     
     # Check if known plugins are loaded
-    expected_plugins = ["memory", "readurls", "privacy", "web_search", "deep_research", "deepthink", "longcepo", "spl", "proxy", "mcp", "compact"]
+    expected_plugins = ["memory", "readurls", "privacy", "web_search", "deep_research", "deepthink", "longcepo", "spl", "proxy", "mcp", "compact", "streaming_hints"]
     for plugin_name in expected_plugins:
         assert plugin_name in plugin_approaches, f"Plugin {plugin_name} not loaded"
 
