@@ -1,11 +1,11 @@
 # OptiLLM
 
 <p align="center">
-  <img src="optillm-logo.png" alt="OptiLLM Logo" width="400" />
+  <img src="https://raw.githubusercontent.com/algorithmicsuperintelligence/optillm/main/optillm-logo.png" alt="OptiLLM Logo" width="400" />
 </p>
 
 <p align="center">
-  <strong>🚀 2-10x accuracy improvements on reasoning tasks with zero training</strong>
+  <strong>2-10x accuracy improvements on reasoning tasks with zero training</strong>
 </p>
 
 <p align="center">
@@ -15,110 +15,85 @@
 </p>
 
 <p align="center">
-  <a href="https://huggingface.co/spaces/codelion/optillm">🤗 HuggingFace Space</a> •
-  <a href="https://colab.research.google.com/drive/1SpuUb8d9xAoTh32M-9wJsB50AOH54EaH?usp=sharing">📓 Colab Demo</a> •
-  <a href="https://github.com/algorithmicsuperintelligence/optillm/discussions">💬 Discussions</a>
+  <a href="https://huggingface.co/spaces/codelion/optillm">HuggingFace Space</a> |
+  <a href="https://colab.research.google.com/drive/1SpuUb8d9xAoTh32M-9wJsB50AOH54EaH?usp=sharing">Colab Demo</a> |
+  <a href="https://github.com/algorithmicsuperintelligence/optillm/discussions">Discussions</a>
 </p>
 
----
+**OptiLLM** is an OpenAI API-compatible optimizing inference proxy that implements 20+ state-of-the-art techniques to dramatically improve LLM accuracy and performance on reasoning tasks, without requiring any model training or fine-tuning.
 
-**OptiLLM** is an OpenAI API-compatible optimizing inference proxy that implements 20+ state-of-the-art techniques to dramatically improve LLM accuracy and performance on reasoning tasks - without requiring any model training or fine-tuning.
+It is possible to beat the frontier models using these techniques across diverse tasks by doing additional compute at inference time. A good example of how to combine such techniques is the [CePO approach](optillm/cepo) from Cerebras.
 
-It is possible to beat the frontier models using these techniques across diverse tasks by doing additional compute at inference time. A good example of how to combine such techniques together is the [CePO approach](optillm/cepo) from Cerebras.
+## Key features
 
-## ✨ Key Features
+- **Instant improvements**: 2-10x better accuracy on math, coding, and logical reasoning
+- **Drop-in replacement**: Works with any OpenAI-compatible API endpoint
+- **20+ optimization techniques**: From simple best-of-N to advanced MCTS and planning
+- **Zero training required**: Just proxy your existing API calls through OptiLLM
+- **Production ready**: Used in production by companies and researchers worldwide
+- **Multi-provider**: Supports OpenAI, Anthropic, Google, Cerebras, and 100+ models via LiteLLM
 
-- **🎯 Instant Improvements**: 2-10x better accuracy on math, coding, and logical reasoning
-- **🔌 Drop-in Replacement**: Works with any OpenAI-compatible API endpoint  
-- **🧠 20+ Optimization Techniques**: From simple best-of-N to advanced MCTS and planning
-- **📦 Zero Training Required**: Just proxy your existing API calls through OptiLLM
-- **⚡ Production Ready**: Used in production by companies and researchers worldwide
-- **🌍 Multi-Provider**: Supports OpenAI, Anthropic, Google, Cerebras, and 100+ models via LiteLLM
-
-## 🚀 Quick Start
-
-Get powerful reasoning improvements in 3 simple steps:
+## Quick start
 
 ```bash
-# 1. Install OptiLLM
 pip install optillm
-
-# 2. Start the server
 export OPENAI_API_KEY="your-key-here"
 optillm
-
-# 3. Use with any OpenAI client - just change the model name!
 ```
+
+Point any OpenAI client at the proxy and prefix the model name with a technique:
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8000/v1")
 
-# Add 'moa-' prefix for Mixture of Agents optimization
 response = client.chat.completions.create(
-    model="moa-gpt-4o-mini",  # This gives you GPT-4o performance from GPT-4o-mini!
-    messages=[{"role": "user", "content": "Solve: If 2x + 3 = 7, what is x?"}]
+    model="moa-gpt-4o-mini",  # This gives you GPT-4o performance from GPT-4o-mini
+    messages=[{"role": "user", "content": "Solve: If 2x + 3 = 7, what is x?"}],
 )
 ```
 
-**Before OptiLLM**: "x = 1" ❌  
-**After OptiLLM**: "Let me work through this step by step: 2x + 3 = 7, so 2x = 4, therefore x = 2" ✅
+**Before OptiLLM**: "x = 1"  
+**After OptiLLM**: "Let me work through this step by step: 2x + 3 = 7, so 2x = 4, therefore x = 2"
 
-## 📊 Proven Results
+## Results
 
-OptiLLM delivers measurable improvements across diverse benchmarks:
-
-| Technique | Base Model | Improvement | Benchmark |
+| Technique | Base model | Improvement | Benchmark |
 |-----------|------------|-------------|-----------|
-| **MARS** | Gemini 2.5 Flash Lite | **+30.0 points** | AIME 2025 (43.3→73.3) |
-| **CePO** | Llama 3.3 70B | **+18.6 points** | Math-L5 (51.0→69.6) |
-| **AutoThink** | DeepSeek-R1-1.5B | **+9.34 points** | GPQA-Diamond (21.72→31.06) |
-| **LongCePO** | Llama 3.3 70B | **+13.6 points** | InfiniteBench (58.0→71.6) |
-| **MOA** | GPT-4o-mini | **Matches GPT-4** | Arena-Hard-Auto |
-| **PlanSearch** | GPT-4o-mini | **+20% pass@5** | LiveCodeBench |
+| MARS | Gemini 2.5 Flash Lite | +30.0 points | AIME 2025 (43.3 to 73.3) |
+| CePO | Llama 3.3 70B | +18.6 points | Math-L5 (51.0 to 69.6) |
+| LongCePO | Llama 3.3 70B | +13.6 points | InfiniteBench (58.0 to 71.6) |
+| AutoThink | DeepSeek-R1-1.5B | +9.34 points | GPQA-Diamond (21.72 to 31.06) |
+| PlanSearch | GPT-4o-mini | +20% pass@5 | LiveCodeBench |
+| MOA | GPT-4o-mini | Matches GPT-4 | Arena-Hard-Auto |
 
-*Full benchmark results [below](#sota-results-on-benchmarks-with-optillm)* ⬇️
+See [benchmark results](#benchmark-results) for the full tables.
 
-## 🏗️ Installation
+## Installation
 
-### Using pip
+**pip**
 
 ```bash
 pip install optillm
-optillm
-2024-10-22 07:45:05,612 - INFO - Loaded plugin: privacy
-2024-10-22 07:45:06,293 - INFO - Loaded plugin: memory
-2024-10-22 07:45:06,293 - INFO - Starting server with approach: auto
 ```
 
-### Using docker
+**Docker**
 
 ```bash
 docker pull ghcr.io/algorithmicsuperintelligence/optillm:latest
 docker run -p 8000:8000 ghcr.io/algorithmicsuperintelligence/optillm:latest
-2024-10-22 07:45:05,612 - INFO - Loaded plugin: privacy
-2024-10-22 07:45:06,293 - INFO - Loaded plugin: memory
-2024-10-22 07:45:06,293 - INFO - Starting server with approach: auto
 ```
 
-**Available Docker image variants:**
+| Image tag | Contents |
+|-----------|----------|
+| `latest` | All dependencies for local inference and plugins |
+| `latest-proxy` | Lightweight image without local inference |
+| `latest-offline` | Self-contained image with pre-downloaded models (spaCy) for fully offline operation |
 
-- **Full image** (`latest`): Includes all dependencies for local inference and plugins
-- **Proxy-only** (`latest-proxy`): Lightweight image without local inference capabilities
-- **Offline** (`latest-offline`): Self-contained image with pre-downloaded models (spaCy) for fully offline operation
+To build and run from the repository, set your keys in `docker-compose.yaml` or a `.env` file and run `docker compose up -d`.
 
-```bash
-# Proxy-only (smallest)
-docker pull ghcr.io/algorithmicsuperintelligence/optillm:latest-proxy
-
-# Offline (largest, includes pre-downloaded models)
-docker pull ghcr.io/algorithmicsuperintelligence/optillm:latest-offline
-```
-
-### Install from source
-
-Clone the repository with `git` and use `pip install` to setup the dependencies.
+**From source**
 
 ```bash
 git clone https://github.com/algorithmicsuperintelligence/optillm.git
@@ -126,396 +101,178 @@ cd optillm
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-## 🔒 SSL Configuration
-
-OptILLM supports SSL certificate verification configuration for working with self-signed certificates or corporate proxies.
-
-**Disable SSL verification (development only):**
-```bash
-# Command line
-optillm --no-ssl-verify
-
-# Environment variable
-export OPTILLM_SSL_VERIFY=false
-optillm
-```
-
-**Use custom CA certificate:**
-```bash
-# Command line
-optillm --ssl-cert-path /path/to/ca-bundle.crt
-
-# Environment variable
-export OPTILLM_SSL_CERT_PATH=/path/to/ca-bundle.crt
-optillm
-```
-
-⚠️ **Security Note**: Disabling SSL verification is insecure and should only be used in development. For production environments with custom CAs, use `--ssl-cert-path` instead. See [SSL_CONFIGURATION.md](SSL_CONFIGURATION.md) for details.
-
-## 🔒 URL Fetch Security (readurls plugin)
-
-The `readurls` plugin fetches URLs found in prompts and blocks requests to non-public destinations (private, loopback, link-local, reserved addresses such as the cloud metadata IP `169.254.169.254`) to prevent SSRF. Every redirect hop is re-validated and unresolvable hosts are rejected.
-
-If your deployment intentionally needs to read internal documentation pages, you can explicitly opt out:
-
-```bash
-# Command line
-optillm --readurls-allow-internal
-
-# Environment variable
-export OPTILLM_READURLS_ALLOW_INTERNAL=true
-optillm
-```
-
-⚠️ **Security Note**: Only enable this on trusted networks where internal URL fetching is actually required.
-
-## 🔒 Code Execution Security (executecode plugin)
-
-The `executecode` plugin executes Python code (from user requests and LLM responses) in a live Jupyter kernel with **no sandboxing**. Because arbitrary code execution on the host cannot be safely exposed by default, this plugin is **disabled unless you explicitly opt in**:
-
-```bash
-# Command line
-optillm --enable-unsafe-plugins=executecode
-
-# Environment variable
-export OPTILLM_ENABLE_UNSAFE_PLUGINS=executecode
-optillm
-```
-
-⚠️ **Security Note**: Only enable this plugin in single-user, air-gapped environments where the person submitting requests is trusted with full access to the host running optillm.
-**Known limitation (DNS rebinding)**: the guard validates DNS resolution before each request, but the underlying HTTP client performs a second resolution when it opens the connection, so a domain under attacker control could rebind to an internal address between the two lookups. For high-security deployments, additionally restrict the network egress of the optillm process (firewall or service-mesh policy) instead of relying on this check alone.
-
-## Implemented techniques
-
-| Approach                             | Slug               | Description                                                                                    |
-| ------------------------------------ | ------------------ | ---------------------------------------------------------------------------------------------- |
-| [MARS (Multi-Agent Reasoning System)](optillm/mars) | `mars`             | Multi-agent reasoning with diverse temperature exploration, cross-verification, and iterative improvement |
-| [Cerebras Planning and Optimization](optillm/cepo)   | `cepo`             | Combines Best of N, Chain-of-Thought, Self-Reflection, Self-Improvement, and various prompting techniques |
-| CoT with Reflection                  | `cot_reflection`   | Implements chain-of-thought reasoning with \<thinking\>, \<reflection> and \<output> sections |
-| PlanSearch                           | `plansearch`       | Implements a search algorithm over candidate plans for solving a problem in natural language   |
-| ReRead                               | `re2`              | Implements rereading to improve reasoning by processing queries twice                          |
-| Self-Consistency                     | `self_consistency` | Implements an advanced self-consistency method                                                 |
-| Z3 Solver                            | `z3`               | Utilizes the Z3 theorem prover for logical reasoning                                           |
-| R* Algorithm                         | `rstar`            | Implements the R* algorithm for problem-solving                                                |
-| LEAP                                 | `leap`             | Learns task-specific principles from few shot examples                                         |
-| Round Trip Optimization              | `rto`              | Optimizes responses through a round-trip process                                               |
-| Best of N Sampling                   | `bon`              | Generates multiple responses and selects the best one                                          |
-| Mixture of Agents                    | `moa`              | Combines responses from multiple critiques                                                     |
-| Monte Carlo Tree Search              | `mcts`             | Uses MCTS for decision-making in chat responses                                                |
-| PV Game                              | `pvg`              | Applies a prover-verifier game approach at inference time                                      |
-| [Deep Confidence](optillm/deepconf) | N/A for proxy | Implements confidence-guided reasoning with multiple intensity levels for enhanced accuracy |
-| CoT Decoding                         |  N/A for proxy     | Implements chain-of-thought decoding to elicit reasoning without explicit prompting            |
-| Entropy Decoding                     |  N/A for proxy     | Implements adaptive sampling based on the uncertainty of tokens during generation              |
-| Thinkdeeper                          |  N/A for proxy     | Implements the `reasoning_effort` param from OpenAI for reasoning models like DeepSeek R1      |
-| [AutoThink](optillm/autothink)       |  N/A for proxy     | Combines query complexity classification with steering vectors to enhance reasoning            |
-
-## Implemented plugins
-
-| Plugin                  | Slug               | Description                                                                                    |
-| ----------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
-| [System Prompt Learning](optillm/plugins/spl)  | `spl`              | Implements what [Andrej Karpathy called the third paradigm](https://x.com/karpathy/status/1921368644069765486) for LLM learning, this enables the model to acquire program solving knowledge and strategies |
-| [Deep Think](optillm/plugins/deepthink)              | `deepthink`        | Implements a Gemini-like Deep Think approach using inference time scaling for reasoning LLMs |
-| [Long-Context Cerebras Planning and Optimization](optillm/plugins/longcepo)              | `longcepo`              | Combines planning and divide-and-conquer processing of long documents to enable infinite context  |
-| Majority Voting         | `majority_voting`  | Generates k candidate solutions and selects the most frequent answer through majority voting (default k=6) |
-| MCP Client              | `mcp`              | Implements the model context protocol (MCP) client, enabling you to use any LLM with any MCP Server  |
-| Router                  | `router`           | Uses the [optillm-modernbert-large](https://huggingface.co/codelion/optillm-modernbert-large) model to route requests to different approaches based on the user prompt |
-| Chain-of-Code           | `coc`              | Implements a chain of code approach that combines CoT with code execution and LLM based code simulation |
-| Memory                  | `memory`           | Implements a short term memory layer, enables you to use unbounded context length with any LLM. Set `OPTILLM_MEMORY_FILE` to opt in to file-backed persistence so memories survive across requests |
-| Privacy                 | `privacy`          | Anonymize PII data in request and deanonymize it back to original value in response            |
-| Read URLs               | `readurls`         | Reads all URLs found in the request, fetches the content at the URL and adds it to the context |
-| Execute Code            | `executecode`      | Enables use of code interpreter to execute python code in requests and LLM generated responses. **Disabled by default** (executes arbitrary code); opt in with `--enable-unsafe-plugins=executecode` |
-| JSON                    | `json`             | Enables structured outputs using the outlines library, supports pydantic types and JSON schema |
-| GenSelect               | `genselect`        | Generative Solution Selection - generates multiple candidates and selects the best based on quality criteria |
-| Web Search              | `web_search`       | Performs Google searches using Chrome automation (Selenium) to gather search results and URLs |
-| [Deep Research](optillm/plugins/deep_research)           | `deep_research`    | Implements Test-Time Diffusion Deep Researcher (TTD-DR) for comprehensive research reports using iterative refinement |
-| [Proxy](optillm/plugins/proxy)      | `proxy`            | Load balancing and failover across multiple LLM providers with health monitoring and round-robin routing |
-| [Streaming Hints](optillm/plugins/streaming_hints) | `streaming_hints` | Watches the reasoning as it is generated and injects relevant hints from a memory bank at moments of uncertainty |
-
-We support all major LLM providers and models for inference. You need to set the correct environment variable and the proxy will pick the corresponding client.
-
-| Provider | Required Environment Variables | Additional Notes |
-|----------|-------------------------------|------------------|
-| OptiLLM | `OPTILLM_API_KEY` | Uses the inbuilt local server for inference, supports logprobs and decoding techniques like `cot_decoding` & `entropy_decoding` |
-| OpenAI | `OPENAI_API_KEY` | You can use this with any OpenAI compatible endpoint (e.g. OpenRouter) by setting the `base_url` |
-| Cerebras | `CEREBRAS_API_KEY` | You can use this for fast inference with supported models, see [docs for details](https://inference-docs.cerebras.ai/introduction) |
-| Azure OpenAI | `AZURE_OPENAI_API_KEY`<br>`AZURE_API_VERSION`<br>`AZURE_API_BASE` | - |
-| Azure OpenAI (Managed Identity) | `AZURE_API_VERSION`<br>`AZURE_API_BASE` | Login required using `az login`, see [docs for details](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/managed-identity) |
-| LiteLLM | depends on the model | See [docs for details](https://docs.litellm.ai/docs/providers) |
-
-You can then run the optillm proxy as follows.
-
-```bash
 python optillm.py
-2024-09-06 07:57:14,191 - INFO - Starting server with approach: auto
-2024-09-06 07:57:14,191 - INFO - Server configuration: {'approach': 'auto', 'mcts_simulations': 2, 'mcts_exploration': 0.2, 'mcts_depth': 1, 'best_of_n': 3, 'model': 'gpt-4o-mini', 'rstar_max_depth': 3, 'rstar_num_rollouts': 5, 'rstar_c': 1.4, 'base_url': '', 'host': '127.0.0.1'}
- * Serving Flask app 'optillm'
- * Debug mode: off
-2024-09-06 07:57:14,212 - INFO - WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
- * Running on http://127.0.0.1:8000
-2024-09-06 07:57:14,212 - INFO - Press CTRL+C to quit
 ```
 
-> **Security Note**: By default, optillm binds to `127.0.0.1` (localhost only) for security. To allow external connections (e.g., for Docker or remote access), use `--host 0.0.0.0`. Only do this on trusted networks or with proper authentication configured via `--optillm-api-key`.
+## Providers
+
+Set the environment variable for your provider and the proxy picks the matching client.
+
+| Provider | Required environment variables | Notes |
+|----------|--------------------------------|-------|
+| OptiLLM | `OPTILLM_API_KEY` | Built-in local inference server; supports logprobs and decoding techniques such as `cot_decoding` and `entropy_decoding` |
+| OpenAI | `OPENAI_API_KEY` | Also works with any OpenAI-compatible endpoint (e.g. OpenRouter) by setting `--base-url` |
+| Cerebras | `CEREBRAS_API_KEY` | See the [Cerebras docs](https://inference-docs.cerebras.ai/introduction) |
+| Azure OpenAI | `AZURE_OPENAI_API_KEY`<br>`AZURE_API_VERSION`<br>`AZURE_API_BASE` | |
+| Azure OpenAI (Managed Identity) | `AZURE_API_VERSION`<br>`AZURE_API_BASE` | Requires `az login`; see the [Azure docs](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/managed-identity) |
+| LiteLLM | Depends on the model | See the [LiteLLM docs](https://docs.litellm.ai/docs/providers) |
+
+Other models work through [LiteLLM](https://docs.litellm.ai/docs/#litellm-python-sdk). For example, set `GEMINI_API_KEY` and call `moa-gemini/gemini-1.5-flash-002`.
+
 ## Usage
 
-Once the proxy is running, you can use it as a drop in replacement for an OpenAI client by setting the `base_url` as `http://localhost:8000/v1`.
+### Selecting a technique
+
+When the server runs with the default `auto` approach, a technique can be selected in three ways, in this order of preference:
 
 ```python
-import os
-from openai import OpenAI
+# 1. Model name prefix
+client.chat.completions.create(model="moa-gpt-4o-mini", messages=messages)
 
-OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
-OPENAI_BASE_URL = "http://localhost:8000/v1"
-client = OpenAI(api_key=OPENAI_KEY, base_url=OPENAI_BASE_URL)
-
-response = client.chat.completions.create(
-  model="moa-gpt-4o",
-  messages=[
-    {
-      "role": "user",
-      "content": "Write a Python program to build an RL model to recite text from any position that the user provides, using only numpy."
-    }
-  ],
-  temperature=0.2
+# 2. extra_body field
+client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=messages,
+    extra_body={"optillm_approach": "bon|moa|mcts"},
 )
 
-print(response)
-```
-The code above applies to both OpenAI and Azure OpenAI, just remember to populate the `OPENAI_API_KEY` env variable with the proper key.
-There are multiple ways to control the optimization techniques, they are applied in the follow order of preference:
-
-- You can control the technique you use for optimization by prepending the slug to the model name `{slug}-model-name`. E.g. in the above code we are using `moa` or mixture of agents as the optimization approach. In the proxy logs you will see the following showing the `moa` is been used with the base model as `gpt-4o-mini`.
-
-```bash
-2024-09-06 08:35:32,597 - INFO - Using approach moa, with gpt-4o-mini
-2024-09-06 08:35:35,358 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-2024-09-06 08:35:39,553 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-2024-09-06 08:35:44,795 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-2024-09-06 08:35:44,797 - INFO - 127.0.0.1 - - [06/Sep/2024 08:35:44] "POST /v1/chat/completions HTTP/1.1" 200 -
-```
-
-- Or, you can pass the slug in the `optillm_approach` field in the `extra_body`.
-
-```bash
-response = client.chat.completions.create(
-  model="gpt-4o-mini",
-  messages=[{ "role": "user","content": "" }],
-  temperature=0.2,
-  extra_body={"optillm_approach": "bon|moa|mcts"}
-)
-```
-- Or, you can just mention the approach in either your `system` or `user` prompt, within `<optillm_approach> </optillm_approach>` tags.
-
-```bash
-response = client.chat.completions.create(
-  model="gpt-4o-mini",
-  messages=[{ "role": "user","content": "<optillm_approach>re2</optillm_approach> How many r's are there in strawberry?" }],
-  temperature=0.2
+# 3. Tag in the system or user prompt
+client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "<optillm_approach>re2</optillm_approach> How many r's are there in strawberry?"}],
 )
 ```
 
-> [!TIP]
-> You can also combine different techniques either by using symbols `&` and `|`. When you use `&` the techniques are processed in the order from left to right in a pipeline
-> with response from previous stage used as request to the next. While, with `|` we run all the requests in parallel and generate multiple responses that are returned as a list.
+If the server is started with a specific `--approach`, set `model` to the model name only.
 
-Please note that the convention described above works only when the optillm server has been started with inference approach set to `auto`. Otherwise, the `model` attribute in the client request must be set with the model name only.
+### Combining techniques
 
-We now support all LLM providers (by wrapping around the [LiteLLM sdk](https://docs.litellm.ai/docs/#litellm-python-sdk)). E.g. you can use the Gemini Flash model with `moa` by setting passing the api key in the environment variable `os.environ['GEMINI_API_KEY']` and then calling the model `moa-gemini/gemini-1.5-flash-002`. In the output you will then see that LiteLLM is being used to call the base model.
+- `&` runs techniques as a pipeline from left to right, using each response as the request to the next stage: `cot_reflection&moa`
+- `|` runs techniques in parallel and returns the responses as a list: `bon|moa|mcts`
 
-```bash
-9:43:21 - LiteLLM:INFO: utils.py:2952 -
-LiteLLM completion() model= gemini-1.5-flash-002; provider = gemini
-2024-09-29 19:43:21,011 - INFO -
-LiteLLM completion() model= gemini-1.5-flash-002; provider = gemini
-2024-09-29 19:43:21,481 - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent?key=[redacted] "HTTP/1.1 200 OK"
-19:43:21 - LiteLLM:INFO: utils.py:988 - Wrapper: Completed Call, calling success_handler
-2024-09-29 19:43:21,483 - INFO - Wrapper: Completed Call, calling success_handler
-19:43:21 - LiteLLM:INFO: utils.py:2952 -
-LiteLLM completion() model= gemini-1.5-flash-002; provider = gemini
-```
+### How requests flow
 
-> [!TIP]
-> optillm is a transparent proxy and will work with any LLM API or provider that has an OpenAI API compatible chat completions endpoint, and in turn, optillm also exposes
-the same OpenAI API compatible chat completions endpoint. This should allow you to integrate it into any existing tools or frameworks easily. If the LLM you want to use
-doesn't have an OpenAI API compatible endpoint (like Google or Anthropic) you can use [LiteLLM proxy server](https://docs.litellm.ai/docs/proxy/quick_start) that supports most LLMs.
+![Sequence diagram showing optillm in use](https://raw.githubusercontent.com/algorithmicsuperintelligence/optillm/main/optillm-sequence-diagram.png)
 
-The following sequence diagram illustrates how the request and responses go through optillm.
+- `A` is an existing tool, framework, or your own code using any OpenAI client SDK.
+- `B` is the optillm service, which sends requests to the configured `base_url`.
+- `C` is any service providing an OpenAI-compatible chat completions endpoint.
 
-![Sequance diagram showing optillm in use](https://raw.githubusercontent.com/algorithmicsuperintelligence/optillm/main/optillm-sequence-diagram.png)
+For an LLM without an OpenAI-compatible endpoint, you can use the [LiteLLM proxy server](https://docs.litellm.ai/docs/proxy/quick_start).
 
-In the diagram:
-- `A` is an existing tool (like [oobabooga](https://github.com/oobabooga/text-generation-webui/)), framework (like [patchwork](https://github.com/patched-codes/patchwork))
-or your own code where you want to use the results from optillm. You can use it directly using any OpenAI client sdk.
-- `B` is the optillm service (running directly or in a docker container) that will send requests to the `base_url`.
-- `C` is any service providing an OpenAI API compatible chat completions endpoint.
+### Local inference
 
-### Local inference server
-
-We support loading any HuggingFace model or LoRA directly in optillm. To use the built-in inference server set the `OPTILLM_API_KEY` to any value (e.g. `export OPTILLM_API_KEY="optillm"`)
-and then use the same in your OpenAI client. You can pass any HuggingFace model in model field. If it is a private model make sure you set the `HF_TOKEN` environment variable
-with your HuggingFace key. We also support adding any number of LoRAs on top of the model by using the `+` separator.
-
-E.g. The following code loads the base model `meta-llama/Llama-3.2-1B-Instruct` and then adds two LoRAs on top - `patched-codes/Llama-3.2-1B-FixVulns` and `patched-codes/Llama-3.2-1B-FastApply`.
-You can specify which LoRA to use using the `active_adapter` param in `extra_body` field of OpenAI SDK client. By default we will load the last specified adapter.
+Set `OPTILLM_API_KEY` to any value to use the built-in inference server, and use the same value in your client. Any HuggingFace model can be passed as the model name; set `HF_TOKEN` for private models. Add LoRA adapters with the `+` separator and choose one with `active_adapter` (the last one is used by default).
 
 ```python
-OPENAI_BASE_URL = "http://localhost:8000/v1"
-OPENAI_KEY = "optillm"
+client = OpenAI(api_key="optillm", base_url="http://localhost:8000/v1")
+
 response = client.chat.completions.create(
-  model="meta-llama/Llama-3.2-1B-Instruct+patched-codes/Llama-3.2-1B-FastApply+patched-codes/Llama-3.2-1B-FixVulns",
-  messages=messages,
-  temperature=0.2,
-  logprobs = True,
-  top_logprobs = 3,
-  extra_body={"active_adapter": "patched-codes/Llama-3.2-1B-FastApply"},
+    model="meta-llama/Llama-3.2-1B-Instruct+patched-codes/Llama-3.2-1B-FastApply+patched-codes/Llama-3.2-1B-FixVulns",
+    messages=messages,
+    temperature=0.2,
+    logprobs=True,
+    top_logprobs=3,
+    extra_body={"active_adapter": "patched-codes/Llama-3.2-1B-FastApply"},
 )
 ```
 
-You can also use the alternate decoding techniques like `cot_decoding` and `entropy_decoding` directly with the local inference server.
+Alternate decoding techniques are available on the local server:
 
 ```python
 response = client.chat.completions.create(
-  model="meta-llama/Llama-3.2-1B-Instruct",
-  messages=messages,
-  temperature=0.2,
-  extra_body={
+    model="meta-llama/Llama-3.2-1B-Instruct",
+    messages=messages,
+    temperature=0.2,
+    extra_body={
         "decoding": "cot_decoding",  # or "entropy_decoding"
         # CoT specific params
         "k": 10,
         "aggregate_paths": True,
-        # OR Entropy specific params
+        # OR entropy specific params
         "top_k": 27,
         "min_p": 0.03,
-    }
+    },
 )
 ```
 
-The server also exposes the legacy text completions endpoint `POST /v1/completions` (returning `object: "text_completion"` responses), so OpenAI-legacy clients work against the inbuilt inference server too:
+The server also exposes the legacy `POST /v1/completions` endpoint. Streaming is not supported on it yet; use `/v1/chat/completions` for streaming.
 
 ```bash
 curl http://localhost:8000/v1/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPTILLM_API_KEY" \
-  -d '{
-    "model": "meta-llama/Llama-3.2-1B-Instruct",
-    "prompt": "Write a haiku about recursion.",
-    "max_tokens": 64
-  }'
+  -d '{"model": "meta-llama/Llama-3.2-1B-Instruct", "prompt": "Write a haiku about recursion.", "max_tokens": 64}'
 ```
 
-Streaming (`stream: true`) is not supported on `/v1/completions` yet; use `/v1/chat/completions` for streaming responses.
+### External servers (llama.cpp, ollama)
 
-### Starting the optillm proxy with an external server (e.g. llama.cpp or ollama)
-
-- Set the `OPENAI_API_KEY` env variable to a placeholder value
-  - e.g. `export OPENAI_API_KEY="sk-no-key"`
-- Run `./llama-server -c 4096 -m path_to_model` to start the server with the specified model and a context length of 4096 tokens
-- Run `python3 optillm.py --base_url base_url` to start the proxy
-  - e.g. for llama.cpp, run `python3 optillm.py --base_url http://localhost:8080/v1`
+```bash
+export OPENAI_API_KEY="sk-no-key"  # placeholder
+./llama-server -c 4096 -m path_to_model
+python3 optillm.py --base-url http://localhost:8080/v1
+```
 
 > [!WARNING]
-> The Anthropic API, llama.cpp-server, and ollama currently do not support sampling multiple responses from a model, which limits the available approaches to the following:
-> `cot_reflection`, `leap`, `plansearch`, `rstar`, `rto`, `self_consistency`, `re2`, and `z3`. For models on HuggingFace, you can use the built-in local inference server as it supports multiple responses.
+> The Anthropic API, llama.cpp-server, and ollama do not support sampling multiple responses from a model, which limits the available approaches to `cot_reflection`, `leap`, `plansearch`, `rstar`, `rto`, `self_consistency`, `re2`, and `z3`. For HuggingFace models, the built-in local inference server supports multiple responses.
 
-### MCP Plugin
+## Use as an LLM gateway
 
-The Model Context Protocol (MCP) plugin enables OptiLLM to connect with MCP servers, bringing external tools, resources, and prompts into the context of language models. This allows for powerful integrations with filesystem access, database queries, API connections, and more.
+The `proxy` plugin turns OptiLLM into a self-hosted gateway with load balancing, failover, and health checks across any OpenAI-compatible providers, with no gateway fees. It can also apply any of the techniques below to the requests it routes, combining routing and optimization in one service. See [Using OptiLLM as an LLM gateway](docs/llm-gateway.md) for setup.
 
-OptiLLM supports both **local** and **remote** MCP servers through multiple transport methods:
-- **stdio**: Local servers (traditional)
-- **SSE**: Remote servers via Server-Sent Events
-- **Streamable HTTP**: Remote servers via the MCP Streamable HTTP transport
+## Techniques
 
-#### What is MCP?
+| Approach | Slug | Description |
+|----------|------|-------------|
+| [MARS (Multi-Agent Reasoning System)](optillm/mars) | `mars` | Multi-agent reasoning with diverse temperature exploration, cross-verification, and iterative improvement |
+| [Cerebras Planning and Optimization](optillm/cepo) | `cepo` | Combines Best of N, Chain-of-Thought, Self-Reflection, Self-Improvement, and various prompting techniques |
+| CoT with Reflection | `cot_reflection` | Chain-of-thought reasoning with `<thinking>`, `<reflection>` and `<output>` sections |
+| PlanSearch | `plansearch` | Search over candidate plans for solving a problem in natural language |
+| ReRead | `re2` | Improves reasoning by processing queries twice |
+| Self-Consistency | `self_consistency` | An advanced self-consistency method |
+| Z3 Solver | `z3` | Uses the Z3 theorem prover for logical reasoning |
+| R* Algorithm | `rstar` | The R* algorithm for problem solving |
+| LEAP | `leap` | Learns task-specific principles from few-shot examples |
+| Round Trip Optimization | `rto` | Optimizes responses through a round-trip process |
+| Best of N Sampling | `bon` | Generates multiple responses and selects the best one |
+| Mixture of Agents | `moa` | Combines responses from multiple critiques |
+| Monte Carlo Tree Search | `mcts` | Uses MCTS for decision-making in chat responses |
+| PV Game | `pvg` | Applies a prover-verifier game at inference time |
+| [Deep Confidence](optillm/deepconf) | Local only | Confidence-guided reasoning with multiple intensity levels |
+| CoT Decoding | Local only | Chain-of-thought decoding to elicit reasoning without explicit prompting |
+| Entropy Decoding | Local only | Adaptive sampling based on the uncertainty of tokens during generation |
+| Thinkdeeper | Local only | The `reasoning_effort` parameter for reasoning models like DeepSeek R1 |
+| [AutoThink](optillm/autothink) | Local only | Combines query complexity classification with steering vectors |
 
-The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open protocol standard that allows LLMs to securely access tools and data sources through a standardized interface. MCP servers can provide:
+## Plugins
 
-- **Tools**: Callable functions that perform actions (like writing files, querying databases, etc.)
-- **Resources**: Data sources for providing context (like file contents)
-- **Prompts**: Reusable prompt templates for specific use cases
+| Plugin | Slug | Description |
+|--------|------|-------------|
+| [System Prompt Learning](optillm/plugins/spl) | `spl` | Implements what [Andrej Karpathy called the third paradigm](https://x.com/karpathy/status/1921368644069765486) for LLM learning, letting the model acquire problem-solving knowledge and strategies |
+| [Deep Think](optillm/plugins/deepthink) | `deepthink` | A Gemini-like Deep Think approach using inference-time scaling for reasoning LLMs |
+| [Long-Context Cerebras Planning and Optimization](optillm/plugins/longcepo) | `longcepo` | Combines planning and divide-and-conquer processing of long documents |
+| Majority Voting | `majority_voting` | Generates k candidate solutions and selects the most frequent answer (default k=6) |
+| [MCP Client](#mcp-plugin) | `mcp` | Model Context Protocol client for using any LLM with any MCP server |
+| Router | `router` | Uses the [optillm-modernbert-large](https://huggingface.co/codelion/optillm-modernbert-large) model to route requests to approaches based on the prompt |
+| Chain-of-Code | `coc` | Combines CoT with code execution and LLM-based code simulation |
+| Memory | `memory` | Short-term memory layer for unbounded context length with any LLM. Set `OPTILLM_MEMORY_FILE` to persist memories across requests |
+| Compact | `compact` | Compresses conversation context that exceeds a token budget into a structured summary, keeping recent turns verbatim |
+| Privacy | `privacy` | Anonymizes PII in the request and restores it in the response |
+| Read URLs | `readurls` | Fetches URLs found in the request and adds their content to the context |
+| Execute Code | `executecode` | Runs Python code from requests and LLM responses. **Disabled by default**; see [Security](#security) |
+| JSON | `json` | Structured outputs using the outlines library; supports pydantic types and JSON schema |
+| GenSelect | `genselect` | Generates multiple candidates and selects the best based on quality criteria |
+| Web Search | `web_search` | Performs Google searches using Chrome automation (Selenium) |
+| [Deep Research](optillm/plugins/deep_research) | `deep_research` | Test-Time Diffusion Deep Researcher (TTD-DR) for research reports using iterative refinement |
+| [Proxy](optillm/plugins/proxy) | `proxy` | Load balancing and failover across LLM providers with health monitoring and round-robin routing |
+| [Streaming Hints](optillm/plugins/streaming_hints) | `streaming_hints` | Watches reasoning as it is generated and injects relevant hints from a memory bank at moments of uncertainty |
 
-#### Configuration
+### MCP plugin
 
-##### Setting up MCP Config
+The [Model Context Protocol](https://modelcontextprotocol.io/) plugin connects OptiLLM to MCP servers, making their tools, resources, and prompts available to the model. When the model calls a tool, the plugin executes it and returns the result to the model.
 
-> **Note on Backwards Compatibility**: Existing MCP configurations will continue to work unchanged. The `transport` field defaults to "stdio" when not specified, maintaining full backwards compatibility with existing setups.
+Configure servers in `~/.optillm/mcp_config.json`:
 
-1. Create a configuration file at `~/.optillm/mcp_config.json` with the following structure:
-
-**Local Server (stdio) - Traditional Method:**
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "transport": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/path/to/allowed/directory1",
-        "/path/to/allowed/directory2"
-      ],
-      "env": {},
-      "description": "Local filesystem access"
-    }
-  },
-  "log_level": "INFO"
-}
-```
-
-**Legacy Format (still works):**
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/directory"],
-      "env": {}
-    }
-  }
-}
-```
-
-**Remote Server (SSE) - New Feature:**
-```json
-{
-  "mcpServers": {
-    "github": {
-      "transport": "sse",
-      "url": "https://api.githubcopilot.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ${GITHUB_TOKEN}",
-        "Accept": "text/event-stream"
-      },
-      "timeout": 30.0,
-      "sse_read_timeout": 300.0,
-      "description": "GitHub MCP server for repository access"
-    }
-  },
-  "log_level": "INFO"
-}
-```
-
-**Remote Server (Streamable HTTP):**
-```json
-{
-  "mcpServers": {
-    "remote-http": {
-      "transport": "streamable_http",
-      "url": "https://api.example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ${API_TOKEN}"
-      },
-      "description": "Remote Streamable HTTP MCP server"
-    }
-  },
-  "log_level": "INFO"
-}
-```
-
-**Mixed Configuration (Local + Remote):**
 ```json
 {
   "mcpServers": {
@@ -529,211 +286,62 @@ The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open 
       "transport": "sse",
       "url": "https://api.githubcopilot.com/mcp",
       "headers": {
-        "Authorization": "Bearer ${GITHUB_TOKEN}"
-      },
-      "description": "GitHub MCP server"
-    },
-    "remote-api": {
-      "transport": "streamable_http",
-      "url": "https://api.company.com/mcp",
-      "description": "Company internal MCP server"
-    }
-  },
-  "log_level": "INFO"
-}
-```
-
-##### Configuration Parameters
-
-**Common Parameters:**
-- **Server name**: A unique identifier for the server (e.g., "filesystem", "github")
-- **transport**: Transport method - "stdio" (default), "sse", or "streamable_http"
-- **description** (optional): Description of the server's functionality
-- **timeout** (optional): Connection timeout in seconds (default: 5.0)
-
-**stdio Transport (Local Servers):**
-- **command**: The executable to run the server
-- **args**: Command-line arguments for the server
-- **env**: Environment variables for the server process
-
-**sse Transport (Server-Sent Events):**
-- **url**: The SSE endpoint URL
-- **headers** (optional): HTTP headers for authentication
-- **sse_read_timeout** (optional): SSE read timeout in seconds (default: 300.0)
-
-**streamable_http Transport (Streamable HTTP):**
-- **url**: The MCP endpoint URL
-- **headers** (optional): HTTP headers for authentication
-- **sse_read_timeout** (optional): Read timeout in seconds (default: 300.0)
-
-The `websocket` transport was removed in MCP Python SDK 2.x and is no longer supported; use `streamable_http` or `sse` instead.
-
-**Environment Variable Expansion:**
-Headers and other string values support environment variable expansion using `${VARIABLE_NAME}` syntax. This is especially useful for API keys:
-```json
-{
-  "headers": {
-    "Authorization": "Bearer ${GITHUB_TOKEN}",
-    "X-API-Key": "${MY_API_KEY}"
-  }
-}
-```
-
-#### Available MCP Servers
-
-OptiLLM supports both local and remote MCP servers:
-
-##### Local MCP Servers (stdio transport)
-
-You can use any of the [official MCP servers](https://modelcontextprotocol.io/examples) or third-party servers that run as local processes:
-
-- **Filesystem**: `@modelcontextprotocol/server-filesystem` - File operations
-- **Git**: `mcp-server-git` - Git repository operations
-- **SQLite**: `@modelcontextprotocol/server-sqlite` - SQLite database access
-- **Brave Search**: `@modelcontextprotocol/server-brave-search` - Web search capabilities
-
-##### Remote MCP Servers (SSE/Streamable HTTP transport)
-
-Remote servers provide centralized access without requiring local installation:
-
-- **GitHub MCP Server**: `https://api.githubcopilot.com/mcp` - Repository management, issue tracking, and code analysis
-- **Third-party servers**: Any MCP server that supports the SSE or Streamable HTTP transports
-
-##### Example: Comprehensive Configuration
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "transport": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/documents"],
-      "description": "Local file system access"
-    },
-    "search": {
-      "transport": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
-      "env": {
-        "BRAVE_API_KEY": "your-api-key-here"
-      },
-      "description": "Web search capabilities"
-    },
-    "github": {
-      "transport": "sse",
-      "url": "https://api.githubcopilot.com/mcp",
-      "headers": {
         "Authorization": "Bearer ${GITHUB_TOKEN}",
         "Accept": "text/event-stream"
       },
-      "description": "GitHub repository and issue management"
+      "description": "GitHub MCP server"
+    },
+    "remote-http": {
+      "transport": "streamable_http",
+      "url": "https://api.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${API_TOKEN}"
+      },
+      "description": "Remote Streamable HTTP MCP server"
     }
   },
   "log_level": "INFO"
 }
 ```
 
-#### Using the MCP Plugin
+| Transport | Required | Optional |
+|-----------|----------|----------|
+| `stdio` (default) | `command` | `args`, `env` |
+| `sse` | `url` | `headers`, `sse_read_timeout` (default 300.0) |
+| `streamable_http` | `url` | `headers`, `sse_read_timeout` (default 300.0) |
 
-Once configured, the MCP plugin will automatically:
+All transports accept `description` and `timeout` (connection timeout in seconds, default 5.0). The `websocket` transport was removed in MCP Python SDK 2.x; use `streamable_http` or `sse` instead. String values such as headers support `${VARIABLE_NAME}` expansion, and those variables must be set before starting OptiLLM.
 
-1. Connect to all configured MCP servers
-2. Discover available tools, resources, and prompts
-3. Make these capabilities available to the language model
-4. Handle tool calls and resource requests
+Any of the [official MCP servers](https://modelcontextprotocol.io/examples) can be used. Logs are written to `~/.optillm/logs/mcp_plugin.log`; check there for connection and tool errors.
 
-The plugin enhances the system prompt with MCP capabilities so the model knows which tools are available. When the model decides to use a tool, the plugin:
+## Configuration
 
-1. Executes the tool with the provided arguments
-2. Returns the results to the model
-3. Allows the model to incorporate the results into its response
+Parameters can be passed on the command line. Most can also be set as environment variables prefixed with `OPTILLM_`, for example `OPTILLM_APPROACH=mcts`. Run `optillm --help` for the full list.
 
-#### Example Queries
-
-Here are some examples of queries that will engage MCP tools:
-
-**Local Server Examples:**
-- "List all the Python files in my documents directory" (Filesystem)
-- "What are the recent commits in my Git repository?" (Git)
-- "Search for the latest information about renewable energy" (Search)
-- "Query my database for all users who registered this month" (Database)
-
-**Remote Server Examples:**
-- "Show me the open issues in my GitHub repository" (GitHub MCP)
-- "Create a new branch for the feature I'm working on" (GitHub MCP)
-- "What are the most recent pull requests that need review?" (GitHub MCP)
-- "Get the file contents from my remote repository" (GitHub MCP)
-
-#### Troubleshooting
-
-##### Logs
-
-The MCP plugin logs detailed information to:
-```
-~/.optillm/logs/mcp_plugin.log
-```
-
-Check this log file for connection issues, tool execution errors, and other diagnostic information.
-
-##### Common Issues
-
-**Local Server Issues (stdio transport):**
-
-1. **Command not found**: Make sure the server executable is available in your PATH, or use an absolute path in the configuration.
-
-2. **Access denied**: For filesystem operations, ensure the paths specified in the configuration are accessible to the process.
-
-**Remote Server Issues (SSE/Streamable HTTP transport):**
-
-3. **Connection timeout**: Remote servers may take longer to connect. Increase the `timeout` value in your configuration.
-
-4. **Authentication failed**: Verify your API keys and tokens are correct. For GitHub MCP server, ensure your `GITHUB_TOKEN` environment variable is set with appropriate permissions.
-
-5. **Network errors**: Check your internet connection and verify the server URL is accessible.
-
-6. **Environment variable not found**: If using `${VARIABLE_NAME}` syntax, ensure the environment variables are set before starting OptILLM.
-
-**General Issues:**
-
-7. **Method not found**: Some servers don't implement all MCP capabilities (tools, resources, prompts). Verify which capabilities the server supports.
-
-8. **Transport not supported**: Ensure you're using a supported transport: "stdio", "sse", or "streamable_http".
-
-**Example: Testing GitHub MCP Connection**
-
-To test if your GitHub MCP server configuration is working:
-
-1. Set your GitHub token: `export GITHUB_TOKEN="your-github-token"`
-2. Start OptILLM and check the logs at `~/.optillm/logs/mcp_plugin.log`
-3. Look for connection success messages and discovered capabilities
-
-## Available parameters
-
-optillm supports various command-line arguments for configuration. When using Docker, these can also be set as environment variables prefixed with `OPTILLM_`.
-
-| Parameter                | Description                                                     | Default Value   |
-|--------------------------|-----------------------------------------------------------------|-----------------|
-| `--approach`             | Inference approach to use                                       | `"auto"`        |
-| `--simulations`          | Number of MCTS simulations                                      | 2               |
-| `--exploration`          | Exploration weight for MCTS                                     | 0.2             |
-| `--depth`                | Simulation depth for MCTS                                       | 1               |
-| `--best-of-n`            | Number of samples for best_of_n approach                        | 3               |
-| `--model`                | OpenAI model to use                                             | `"gpt-4o-mini"` |
-| `--base-url`             | Base URL for OpenAI compatible endpoint                         | `""`            |
-| `--rstar-max-depth`      | Maximum depth for rStar algorithm                               | 3               |
-| `--rstar-num-rollouts`   | Number of rollouts for rStar algorithm                          | 5               |
-| `--rstar-c`              | Exploration constant for rStar algorithm                        | 1.4             |
-| `--n`                    | Number of final responses to be returned                        | 1               |
-| `--return-full-response` | Return the full response including the CoT with <thinking> tags | `False`         |
-| `--port`                 | Specify the port to run the proxy                               | 8000            |
-| `--optillm-api-key`      | Optional API key for client authentication to optillm           | `""`            |
-| `--cepo_*`               | See CePO Parameters section below for detailed config options   | Various         |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `--approach` | Inference approach to use | `auto` |
+| `--model` | OpenAI model to use | `gpt-4o-mini` |
+| `--base-url` | Base URL for an OpenAI-compatible endpoint | `""` |
+| `--host` | Host address to bind the server | `127.0.0.1` |
+| `--port` | Port to run the proxy on | 8000 |
+| `--optillm-api-key` | Optional API key for client authentication to optillm | `""` |
+| `--n` | Number of final responses to return | 1 |
+| `--return-full-response` | Return the full response including the CoT with `<thinking>` tags | `False` |
+| `--mcts-simulations` | Number of MCTS simulations | 2 |
+| `--mcts-exploration` | Exploration weight for MCTS | 0.2 |
+| `--mcts-depth` | Simulation depth for MCTS | 1 |
+| `--best-of-n` | Number of samples for the best_of_n approach | 3 |
+| `--rstar-max-depth` | Maximum depth for the R* algorithm | 3 |
+| `--rstar-num-rollouts` | Number of rollouts for the R* algorithm | 5 |
+| `--rstar-c` | Exploration constant for the R* algorithm | 1.4 |
+| `--cepo_*` | See CePO parameters below | Various |
 
 <details>
-<summary><strong>CePO Parameters</strong></summary>
+<summary><strong>CePO parameters</strong></summary>
 
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
+| Parameter | Description | Default |
+|-----------|-------------|---------|
 | `--cepo_bestofn_n` | Number of responses to be generated in best of n stage | 3 |
 | `--cepo_bestofn_temperature` | Temperature for verifier in best of n stage | 0.1 |
 | `--cepo_bestofn_max_tokens` | Maximum number of tokens for verifier in best of n stage | 4096 |
@@ -759,50 +367,34 @@ optillm supports various command-line arguments for configuration. When using Do
 
 </details>
 
-## Running with Docker
+## Security
 
-optillm can optionally be built and run using Docker and the provided [Dockerfile](https://github.com/algorithmicsuperintelligence/optillm/blob/main/Dockerfile).
+**Network binding and authentication.** The server binds to `127.0.0.1` by default. Use `--host 0.0.0.0` to allow external connections, and only on trusted networks or with authentication enabled. Set `--optillm-api-key` (or `OPTILLM_API_KEY`) to require clients to send `Authorization: Bearer <key>`.
 
-### Using Docker Compose
-
-1. Make sure you have Docker and Docker Compose installed on your system.
-
-2. Either update the environment variables in the docker-compose.yaml file or create a `.env` file in the project root directory and add any environment variables you want to set. For example, to set the OpenAI API key, add the following line to the `.env` file:
-
-   ```bash
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
-
-3. Run the following command to start optillm:
-
-   ```bash
-   docker compose up -d
-   ```
-
-   This will build the Docker image if it doesn't exist and start the optillm service.
-
-4. optillm will be available at `http://localhost:8000`.
-
-When using Docker, you can set these parameters as environment variables. For example, to set the approach and model, you would use:
+**Code execution.** The `executecode` plugin runs Python from requests and LLM responses in a live Jupyter kernel with no sandboxing, so it is disabled unless you opt in. Only enable it in single-user, air-gapped environments where whoever submits requests is trusted with full access to the host.
 
 ```bash
-OPTILLM_APPROACH=mcts
-OPTILLM_MODEL=gpt-4
+optillm --enable-unsafe-plugins=executecode
+# or: export OPTILLM_ENABLE_UNSAFE_PLUGINS=executecode
 ```
 
-To secure the optillm proxy with an API key, set the `OPTILLM_API_KEY` environment variable:
+**URL fetching.** The `readurls` plugin blocks requests to non-public destinations (private, loopback, link-local, and reserved addresses such as the cloud metadata IP `169.254.169.254`) to prevent SSRF. Every redirect hop is re-validated and unresolvable hosts are rejected. Only opt out on trusted networks that need internal URL fetching:
 
 ```bash
-OPTILLM_API_KEY=your_secret_api_key
+optillm --readurls-allow-internal
+# or: export OPTILLM_READURLS_ALLOW_INTERNAL=true
 ```
 
-When the API key is set, clients must include it in their requests using the `Authorization` header:
+The guard validates DNS resolution before each request, but the HTTP client resolves the host again when it connects, so a domain under attacker control could rebind to an internal address between the two lookups. For high-security deployments, also restrict the network egress of the optillm process with a firewall or service-mesh policy.
 
-```plain
-Authorization: Bearer your_secret_api_key
+**SSL verification.** Use a custom CA bundle for self-signed certificates or corporate proxies. Disabling verification is insecure and intended for development only. See [SSL_CONFIGURATION.md](SSL_CONFIGURATION.md) for details.
+
+```bash
+optillm --ssl-cert-path /path/to/ca-bundle.crt  # or: export OPTILLM_SSL_CERT_PATH=...
+optillm --no-ssl-verify                         # or: export OPTILLM_SSL_VERIFY=false
 ```
 
-## SOTA results on benchmarks with optillm
+## Benchmark results
 
 ### MARS on AIME 2025, IMO 2025, and LiveCodeBench (Oct 2025)
 
@@ -815,44 +407,7 @@ Authorization: Bearer your_secret_api_key
 | **LiveCodeBench v5/v6** | Baseline | 105 | 41 | 39.05% | - |
 | **LiveCodeBench v5/v6** | **MARS** | 105 | **53** | **50.48%** | **+11.43pp (+29.3%)** |
 
-Model: google/gemini-2.5-flash-lite-preview-09-2025 via OpenRouter
-Configuration: 3 agents, 2-pass verification, thinking tags disabled for proofs
-
-### AutoThink on GPQA-Diamond & MMLU-Pro (May 2025)
-
-| **Model**     | **GPQA-Diamond**            |                          | **MMLU-Pro**               |                          |
-|----------------|-----------------------------|--------------------------|----------------------------|--------------------------|
-|                | Accuracy (%)                | Avg. Tokens              | Accuracy (%)               | Avg. Tokens              |
-| DeepSeek-R1-Distill-Qwen-1.5B    | 21.72                       | 7868.26                  | 25.58                      | 2842.75                  |
-| with Fixed Budget | 28.47                     | 3570.00                  | 26.18                      | 1815.67                  |
-| **with AutoThink**  | **31.06**                   | **3520.52**              | **26.38**                  | **1792.50**              |
-
-
-### LongCePO on LongBench v2 (Apr 2025)
-
-| Model¹                             | Context window | Short samples (up to 32K words) | Medium samples (32–128K words) |
-|----------------------------------|----------------|------------------|----------------|
-| Llama 3.3 70B Instruct           | 128K           | 36.7 (45.0)               | 27.0 (33.0)            |
-| **LongCePO + Llama 3.3 70B Instruct** | **8K**             | **36.8 ± 1.38**        |  **38.7 ± 2.574 (39.735)²**             |
-| Mistral-Large-Instruct-2411     | 128K           | 41.7 (46.1)                 | 30.7 (34.9)             |
-| o1-mini-2024-09-12               | 128K           | 48.6 (48.9)                | 33.3 (32.9)            |
-| Claude-3.5-Sonnet-20241022       | 200K           | 46.1 (53.9)                | 38.6 (41.9)            |
-| Llama-4-Maverick-17B-128E-Instruct | 524K         | 32.22 (50.56)                  | 28.84 (41.86)               |
-
- ¹ Performance numbers reported by LongBench v2 authors, except for LongCePO and Llama-4-Maverick results.
-
- ² Numbers in parentheses for LongCePO indicate accuracy of majority voting from 5 runs.
-
-### LongCePO on HELMET - InfiniteBench En.MC, 128K length (Apr 2025)
-
-| Model   | Accuracy (%) |
-|---------|---------------|
-| Llama 3.3 70B Instruct  (full context)  | 58.0          |
-| **LongCePO + Llama 3.3 70B Instruct (8K context)** | **71.6 ± 1.855 (73.0)¹**  |
-| o1-mini-2024-09-12 (full context) | 58.0          |
-| gpt-4o-2024-08-06 (full context) | 74.0          |
-
- ¹ Numbers in parentheses for LongCePO indicate accuracy of majority voting from 5 runs.
+Model: google/gemini-2.5-flash-lite-preview-09-2025 via OpenRouter. Configuration: 3 agents, 2-pass verification, thinking tags disabled for proofs.
 
 ### CePO on math and code benchmarks (Sep 2025)
 
@@ -866,6 +421,44 @@ Configuration: 3 agents, 2-pass verification, thinking tags disabled for proofs
 | DeepSeek R1             |   79.8    |   70.0    |  71.5  |     64.3      |
 | OpenAI o3-mini          |   79.6    |   74.8    |  76.8  |     66.3      |
 | Grok3 Think             |   83.9    |   77.3    |**80.2**|     70.6      |
+
+### AutoThink on GPQA-Diamond and MMLU-Pro (May 2025)
+
+| **Model**     | **GPQA-Diamond**            |                          | **MMLU-Pro**               |                          |
+|----------------|-----------------------------|--------------------------|----------------------------|--------------------------|
+|                | Accuracy (%)                | Avg. Tokens              | Accuracy (%)               | Avg. Tokens              |
+| DeepSeek-R1-Distill-Qwen-1.5B    | 21.72                       | 7868.26                  | 25.58                      | 2842.75                  |
+| with Fixed Budget | 28.47                     | 3570.00                  | 26.18                      | 1815.67                  |
+| **with AutoThink**  | **31.06**                   | **3520.52**              | **26.38**                  | **1792.50**              |
+
+<details>
+<summary><strong>Earlier results (2024 to April 2025)</strong></summary>
+
+### LongCePO on LongBench v2 (Apr 2025)
+
+| Model¹                             | Context window | Short samples (up to 32K words) | Medium samples (32–128K words) |
+|----------------------------------|----------------|------------------|----------------|
+| Llama 3.3 70B Instruct           | 128K           | 36.7 (45.0)               | 27.0 (33.0)            |
+| **LongCePO + Llama 3.3 70B Instruct** | **8K**             | **36.8 ± 1.38**        |  **38.7 ± 2.574 (39.735)²**             |
+| Mistral-Large-Instruct-2411     | 128K           | 41.7 (46.1)                 | 30.7 (34.9)             |
+| o1-mini-2024-09-12               | 128K           | 48.6 (48.9)                | 33.3 (32.9)            |
+| Claude-3.5-Sonnet-20241022       | 200K           | 46.1 (53.9)                | 38.6 (41.9)            |
+| Llama-4-Maverick-17B-128E-Instruct | 524K         | 32.22 (50.56)                  | 28.84 (41.86)               |
+
+¹ Performance numbers reported by LongBench v2 authors, except for LongCePO and Llama-4-Maverick results.
+
+² Numbers in parentheses for LongCePO indicate accuracy of majority voting from 5 runs.
+
+### LongCePO on HELMET - InfiniteBench En.MC, 128K length (Apr 2025)
+
+| Model   | Accuracy (%) |
+|---------|---------------|
+| Llama 3.3 70B Instruct  (full context)  | 58.0          |
+| **LongCePO + Llama 3.3 70B Instruct (8K context)** | **71.6 ± 1.855 (73.0)¹**  |
+| o1-mini-2024-09-12 (full context) | 58.0          |
+| gpt-4o-2024-08-06 (full context) | 74.0          |
+
+¹ Numbers in parentheses for LongCePO indicate accuracy of majority voting from 5 runs.
 
 ### CePO on math and code benchmarks (Mar 2025)
 
@@ -893,6 +486,7 @@ Configuration: 3 agents, 2-pass verification, thinking tags disabled for proofs
 | gemini-1.5-flash-002 | 16.67 |
 
 ### readurls&memory-gpt-4o-mini on Google FRAMES Benchmark (Oct 2024)
+
 | Model | Accuracy |
 | ----- | -------- |
 | readurls&memory-gpt-4o-mini | 61.29 |
@@ -919,78 +513,41 @@ Configuration: 3 agents, 2-pass verification, thinking tags disabled for proofs
 
 ### optillm with Patchwork (July 2024)
 
-Since optillm is a drop-in replacement for OpenAI API you can easily integrate it with existing tools and frameworks using the OpenAI client. We used optillm with [patchwork](https://github.com/patched-codes/patchwork) which is an open-source framework that automates development gruntwork like PR reviews, bug fixing, security patching using workflows
-called patchflows. We saw huge performance gains across all the supported patchflows as shown below when using the mixture of agents approach (moa).
+We used optillm with [patchwork](https://github.com/patched-codes/patchwork), an open-source framework that automates development work such as PR reviews, bug fixing, and security patching through workflows called patchflows. The mixture of agents approach (moa) improved performance across all supported patchflows.
 
 ![Results showing optillm mixture of agents approach used with patchflows](https://raw.githubusercontent.com/algorithmicsuperintelligence/optillm/main/moa-patchwork-results.png)
 
+</details>
+
 ## Testing
 
-OptiLLM includes a comprehensive test suite to ensure reliability and compatibility.
-
-### Running Tests
-
-The main test suite can be run from the project root:
 ```bash
-# Test all approaches with default test cases
-python tests/test.py
-
-# Test specific approaches
-python tests/test.py --approaches moa bon mcts
-
-# Run a single test
-python tests/test.py --single-test "Simple Math Problem"
-```
-
-### Unit and Integration Tests
-
-Additional tests are available in the `tests/` directory:
-```bash
-# Run all tests (requires pytest)
-./tests/run_tests.sh
-
-# Run specific test modules
-pytest tests/test_plugins.py -v
-pytest tests/test_api_compatibility.py -v
-```
-
-### CI/CD
-
-All tests are automatically run on pull requests via GitHub Actions. The workflow tests:
-- Multiple Python versions (3.10, 3.11, 3.12)
-- Unit tests for plugins and core functionality
-- API compatibility tests
-- Integration tests with various approaches
-
-See `tests/README.md` for more details on the test structure and how to write new tests.
-
-## 🤝 Contributing
-
-We ❤️ contributions! OptiLLM is built by the community, for the community.
-
-- 🐛 **Found a bug?** [Open an issue](https://github.com/algorithmicsuperintelligence/optillm/issues/new)
-- 💡 **Have an idea?** [Start a discussion](https://github.com/algorithmicsuperintelligence/optillm/discussions)
-- 🔧 **Want to code?** Check out [good first issues](https://github.com/algorithmicsuperintelligence/optillm/labels/good%20first%20issue)
-
-### Development Setup
-```bash
-git clone https://github.com/algorithmicsuperintelligence/optillm.git
-cd optillm
-python -m venv .venv
-source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-pip install -r requirements.txt
 pip install -r tests/requirements.txt
 
-# Run tests
-python -m pytest tests/
+# Approach tests
+python tests/test.py
+python tests/test.py --approaches moa bon mcts
+python tests/test.py --single-test "Simple Math Problem"
+
+# Unit and integration tests
+./tests/run_tests.sh
+pytest tests/test_plugins.py -v
 ```
 
+Tests run on pull requests through GitHub Actions. See [tests/README.md](tests/README.md) for the test structure and how to write new tests.
+
+## Contributing
+
+- Report bugs by [opening an issue](https://github.com/algorithmicsuperintelligence/optillm/issues/new).
+- Share ideas by [starting a discussion](https://github.com/algorithmicsuperintelligence/optillm/discussions).
+- Look for a place to start in the [good first issues](https://github.com/algorithmicsuperintelligence/optillm/labels/good%20first%20issue).
+
 ## References
+
 - [Eliciting Fine-Tuned Transformer Capabilities via Inference-Time Techniques](https://arxiv.org/abs/2506.08060)
 - [AutoThink: efficient inference for reasoning LLMs](https://dx.doi.org/10.2139/ssrn.5253327) - [Implementation](optillm/autothink)
 - [Deep Think with Confidence: Confidence-guided reasoning and inference-time scaling](https://arxiv.org/abs/2508.15260) - [Implementation](optillm/deepconf)
-- [Self-Discover: Large Language Models Self-Compose Reasoning Structures
-](https://arxiv.org/abs/2402.03620) - [Implementation](optillm/plugings/deepthink)
+- [Self-Discover: Large Language Models Self-Compose Reasoning Structures](https://arxiv.org/abs/2402.03620) - [Implementation](optillm/plugins/deepthink)
 - [CePO: Empowering Llama with Reasoning using Test-Time Compute](https://cerebras.ai/blog/cepo) - [Implementation](optillm/cepo)
 - [LongCePO: Empowering LLMs to efficiently leverage infinite context](https://cerebras.ai/blog/longcepo) - [Implementation](optillm/plugins/longcepo)
 - [Chain of Code: Reasoning with a Language Model-Augmented Code Emulator](https://arxiv.org/abs/2312.04474) - [Inspired the implementation of coc plugin](optillm/plugins/coc_plugin.py)
@@ -1025,13 +582,3 @@ If you use this library in your research, please cite:
   url = {https://github.com/algorithmicsuperintelligence/optillm}
 }
 ```
-
----
-
-<p align="center">
-  <strong>Ready to optimize your LLMs? Install OptiLLM and see the difference! 🚀</strong>
-</p>
-
-<p align="center">
-  ⭐ <a href="https://github.com/algorithmicsuperintelligence/optillm">Star us on GitHub</a> if you find OptiLLM useful!
-</p>
