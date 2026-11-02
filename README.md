@@ -171,6 +171,20 @@ optillm
 
 ⚠️ **Security Note**: Only enable this on trusted networks where internal URL fetching is actually required.
 
+## 🔒 Code Execution Security (executecode plugin)
+
+The `executecode` plugin executes Python code (from user requests and LLM responses) in a live Jupyter kernel with **no sandboxing**. Because arbitrary code execution on the host cannot be safely exposed by default, this plugin is **disabled unless you explicitly opt in**:
+
+```bash
+# Command line
+optillm --enable-unsafe-plugins=executecode
+
+# Environment variable
+export OPTILLM_ENABLE_UNSAFE_PLUGINS=executecode
+optillm
+```
+
+⚠️ **Security Note**: Only enable this plugin in single-user, air-gapped environments where the person submitting requests is trusted with full access to the host running optillm.
 **Known limitation (DNS rebinding)**: the guard validates DNS resolution before each request, but the underlying HTTP client performs a second resolution when it opens the connection, so a domain under attacker control could rebind to an internal address between the two lookups. For high-security deployments, additionally restrict the network egress of the optillm process (firewall or service-mesh policy) instead of relying on this check alone.
 
 ## Implemented techniques
@@ -211,7 +225,7 @@ optillm
 | Memory                  | `memory`           | Implements a short term memory layer, enables you to use unbounded context length with any LLM. Set `OPTILLM_MEMORY_FILE` to opt in to file-backed persistence so memories survive across requests |
 | Privacy                 | `privacy`          | Anonymize PII data in request and deanonymize it back to original value in response            |
 | Read URLs               | `readurls`         | Reads all URLs found in the request, fetches the content at the URL and adds it to the context |
-| Execute Code            | `executecode`      | Enables use of code interpreter to execute python code in requests and LLM generated responses |
+| Execute Code            | `executecode`      | Enables use of code interpreter to execute python code in requests and LLM generated responses. **Disabled by default** (executes arbitrary code); opt in with `--enable-unsafe-plugins=executecode` |
 | JSON                    | `json`             | Enables structured outputs using the outlines library, supports pydantic types and JSON schema |
 | GenSelect               | `genselect`        | Generative Solution Selection - generates multiple candidates and selects the best based on quality criteria |
 | Web Search              | `web_search`       | Performs Google searches using Chrome automation (Selenium) to gather search results and URLs |
