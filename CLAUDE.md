@@ -69,16 +69,16 @@ docker compose up -d
 ### Testing
 ```bash
 # Run all approach tests
-python test.py
+python tests/test.py
 
 # Test specific approaches
-python test.py --approaches moa bon mcts
+python tests/test.py --approaches moa bon mcts
 
 # Test with specific model/endpoint
-python test.py --model gpt-4o-mini --base-url http://localhost:8080/v1
+python tests/test.py --model gpt-4o-mini --base-url http://localhost:8080/v1
 
 # Single test case
-python test.py --single-test "specific_test_name"
+python tests/test.py --single-test "specific_test_name"
 ```
 
 ### Evaluation Scripts
