@@ -422,6 +422,11 @@ def execute_single_approach(approach, system_prompt, initial_query, client, mode
             # Note: 'n' is NOT removed - the none_approach passes it to the client which handles multiple completions
             kwargs.pop('stream', None)  # stream is handled by proxy()
 
+            # _execute_completion copies max_completion_tokens to max_tokens for approaches;
+            # don't forward the copy, since o-series and gpt-5 models reject max_tokens.
+            if kwargs.get('max_completion_tokens') is not None:
+                kwargs.pop('max_tokens', None)
+
             # Pass the original messages through when available so multi-turn
             # structure, tool_calls and tool results reach the provider intact.
             # Otherwise reconstruct them from system_prompt and initial_query.
