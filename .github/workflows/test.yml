@@ -312,6 +312,6 @@ jobs:
         echo "MCP tests completed successfully!"
       env:
         OPTILLM_API_KEY: optillm
-        # Not available on fork PRs, where the one test that needs it skips itself
-        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        # Built-in token, read-only on fork PRs; the GitHub MCP test only connects and lists tools
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
