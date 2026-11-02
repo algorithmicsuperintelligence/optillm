@@ -7,6 +7,7 @@ import sys
 import os
 import asyncio
 import json
+import logging
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from pathlib import Path
@@ -24,6 +25,7 @@ from optillm.plugins.mcp_plugin import (
     execute_tool, execute_tool_stdio, execute_tool_sse, execute_tool_websocket,
     execute_tool_streamable_http, execute_tool_with_session, LoggingClientSession, SLUG
 )
+from optillm.plugins.mcp_plugin import logger as mcp_logger
 
 
 class TestServerConfig:
@@ -370,6 +372,49 @@ class TestMCPServerManager:
 
         description = manager.get_capabilities_description()
         assert "No MCP servers available" in description
+
+
+class TestSecretsAreNotLogged:
+    """Env and header values in the MCP config hold API keys and must stay out of the log file"""
+
+    SECRET = "s3cret-value-for-log-test"
+
+    @pytest.fixture(autouse=True)
+    def restore_log_level(self):
+        level = mcp_logger.level
+        mcp_logger.setLevel(logging.DEBUG)
+        yield
+        mcp_logger.setLevel(level)
+
+    def test_load_config(self, tmp_path, caplog):
+        path = tmp_path / "mcp_config.json"
+        path.write_text(json.dumps({"log_level": "DEBUG", "mcpServers": {
+            "local": {"command": "cmd", "env": {"API_KEY": self.SECRET}},
+            "remote": {"transport": "sse", "url": "http://x", "headers": {"Authorization": self.SECRET}},
+        }}))
+        with caplog.at_level(logging.DEBUG, logger=mcp_logger.name):
+            assert MCPConfigManager(str(path)).load_config()
+        assert caplog.records
+        assert self.SECRET not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_connect_stdio(self, caplog):
+        config = ServerConfig(transport="stdio", command="definitely-not-a-command-xyz", env={"API_KEY": self.SECRET})
+        with caplog.at_level(logging.DEBUG, logger=mcp_logger.name), \
+                patch("optillm.plugins.mcp_plugin.find_executable", return_value="/bin/false"), \
+                patch("optillm.plugins.mcp_plugin.stdio_client", side_effect=RuntimeError("stop")):
+            await MCPServer("local", config).connect_stdio_native()
+        assert "API_KEY" in caplog.text
+        assert self.SECRET not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_connect_sse(self, caplog):
+        config = ServerConfig(transport="sse", url="http://127.0.0.1:9/mcp", headers={"Authorization": self.SECRET})
+        with caplog.at_level(logging.DEBUG, logger=mcp_logger.name), \
+                patch("optillm.plugins.mcp_plugin.sse_client", side_effect=RuntimeError("stop")):
+            await MCPServer("remote", config).connect_sse()
+        assert "Authorization" in caplog.text
+        assert self.SECRET not in caplog.text
 
 
 @pytest.mark.asyncio

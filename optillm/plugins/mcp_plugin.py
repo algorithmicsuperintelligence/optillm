@@ -192,7 +192,6 @@ class MCPConfigManager:
                 
             with open(self.config_path, 'r') as f:
                 config_data = f.read()
-                logger.debug(f"Raw config data: {config_data}")
                 config = json.loads(config_data)
             
             # Set log level
@@ -204,7 +203,7 @@ class MCPConfigManager:
             servers_config = config.get("mcpServers", {})
             for server_name, server_config in servers_config.items():
                 self.servers[server_name] = ServerConfig.from_dict(server_config)
-                logger.debug(f"Loaded server config for {server_name}: {server_config}")
+                logger.debug(f"Loaded server config for {server_name} (transport: {self.servers[server_name].transport})")
             
             logger.info(f"Loaded configuration with {len(self.servers)} servers")
             return True
@@ -398,7 +397,7 @@ class MCPServer:
         """Connect to server using SSE transport and discover capabilities"""
         logger.info(f"Connecting to SSE server: {self.server_name}")
         logger.debug(f"SSE URL: {self.config.url}")
-        logger.debug(f"Headers: {self.config.headers}")
+        logger.debug(f"Headers: {list(self.config.headers or {})}")
 
         if not self.config.url:
             logger.error(f"SSE transport requires URL for server {self.server_name}")
@@ -435,7 +434,6 @@ class MCPServer:
 
     async def connect_stdio_native(self) -> bool:
         """Connect using stdio transport with local executable"""
-        logger.debug(f"Server configuration: {vars(self.config)}")
 
         # Validate stdio configuration
         if not self.config.command:
@@ -455,7 +453,7 @@ class MCPServer:
 
         logger.debug(f"Using command: {full_command}")
         logger.debug(f"Arguments: {self.config.args}")
-        logger.debug(f"Environment: {self.config.env}")
+        logger.debug(f"Environment variables: {list(self.config.env or {})}")
 
         # Create server parameters
         server_params = StdioServerParameters(
