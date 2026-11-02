@@ -677,7 +677,8 @@ def parse_conversation(messages):
         if role == 'assistant' and not text_content:
             continue
 
-        if role == 'system':
+        # 'developer' is the OpenAI replacement for 'system' on o-series and newer models
+        if role in ('system', 'developer'):
             system_prompt, optillm_approach = extract_optillm_approach(text_content)
         elif role == 'user':
             if not optillm_approach:

@@ -59,6 +59,7 @@ jobs:
         python -m pytest tests/test_bon_candidate_filtering.py -v --tb=short
         python -m pytest tests/test_compact_plugin.py -v --tb=short
         python -m pytest tests/test_completions_endpoint.py -v --tb=short
+        python -m pytest tests/test_developer_role.py -v --tb=short
         python -m pytest tests/test_entropy_decoding_sampling.py -v --tb=short
         python -m pytest tests/test_mars_agent_routing.py -v --tb=short
         python -m pytest tests/test_mars_aggregation_sampling.py -v --tb=short
