@@ -22,7 +22,8 @@ def test_top_p_keeps_the_most_likely_token():
 
     assert 0 in tokens
     # The nucleus keeps tokens until those before them exceed 0.9: 36 of 40.
-    assert tokens == set(range(36))
+    # The 39 tail tokens tie, so which of them survive depends on the platform.
+    assert len(tokens) == 36
 
 
 def test_min_p_removes_unlikely_tokens():

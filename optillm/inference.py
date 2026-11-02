@@ -1872,6 +1872,10 @@ class InferenceClient:
             ) -> ChatCompletion:
                 """Create a chat completion with OpenAI-compatible parameters"""
                 logger.info("Starting chat completion creation")
+                # max_completion_tokens is the preferred name for the same limit
+                max_completion_tokens = kwargs.pop("max_completion_tokens", None)
+                if max_completion_tokens is not None:
+                    max_tokens = max_completion_tokens
                 if stream:
                     raise NotImplementedError("Streaming is not yet supported")
 

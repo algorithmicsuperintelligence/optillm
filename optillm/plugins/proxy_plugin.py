@@ -37,6 +37,18 @@ def _request_messages(system_prompt: str, initial_query: str, messages: Optional
         {"role": "user", "content": initial_query}
     ]
 
+def _passthrough_config(request_config: Optional[dict]) -> dict:
+    """
+    Build the kwargs forwarded to a provider. Streaming is stripped to force a
+    complete response (server.py converts it to SSE if needed), and the max_tokens
+    copy of max_completion_tokens is dropped because o-series and gpt-5 models reject it.
+    """
+    api_config = dict(request_config or {})
+    api_config.pop('stream', None)
+    if api_config.get('max_completion_tokens') is not None:
+        api_config.pop('max_tokens', None)
+    return api_config
+
 def run(system_prompt: str, initial_query: str, client, model: str,
         request_config: dict = None, messages: list = None) -> Tuple[str, int]:
     """
@@ -65,9 +77,7 @@ def run(system_prompt: str, initial_query: str, client, model: str,
         
         if not config.get('providers'):
             logger.warning(f"No providers configured in {ProxyConfig._config_path}, falling back to original client")
-            # Strip stream parameter to force complete response
-            api_config = dict(request_config or {})
-            api_config.pop('stream', None)
+            api_config = _passthrough_config(request_config)
 
             response = client.chat.completions.create(
                 model=model,
@@ -143,10 +153,7 @@ def run(system_prompt: str, initial_query: str, client, model: str,
         # message support and merges the system prompt when needed.
         logger.info(f"Direct proxy routing for model: {model}")
 
-        # Strip stream parameter to force complete response
-        # server.py will handle converting to SSE streaming format if needed
-        api_config = dict(request_config or {})
-        api_config.pop('stream', None)
+        api_config = _passthrough_config(request_config)
 
         response = proxy_client.chat.completions.create(
             model=model,
@@ -162,9 +169,7 @@ def run(system_prompt: str, initial_query: str, client, model: str,
         logger.error(f"Proxy plugin error: {e}", exc_info=True)
         # Fallback to original client
         logger.info("Falling back to original client")
-        # Strip stream parameter to force complete response
-        api_config = dict(request_config or {})
-        api_config.pop('stream', None)
+        api_config = _passthrough_config(request_config)
 
         response = client.chat.completions.create(
             model=model,
