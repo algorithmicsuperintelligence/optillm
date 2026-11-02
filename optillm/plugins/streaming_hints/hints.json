@@ -1,0 +1,122 @@
+[
+  {
+    "id": "math-units",
+    "domain": "math",
+    "text": "Write down the units of every quantity and check that both sides of each equation have the same units.",
+    "keywords": ["units", "speed", "rate", "distance", "time", "convert", "per", "hour", "minute", "meters"]
+  },
+  {
+    "id": "math-substitute-back",
+    "domain": "math",
+    "text": "Substitute the candidate answer back into the original conditions to confirm it satisfies all of them.",
+    "keywords": ["solve", "equation", "solution", "root", "satisfy", "check", "verify", "answer", "x"]
+  },
+  {
+    "id": "math-small-cases",
+    "domain": "math",
+    "text": "Try the smallest cases (n = 1, 2, 3) by hand and look for a pattern before generalising.",
+    "keywords": ["pattern", "sequence", "integer", "n", "general", "formula", "induction", "sum", "series"]
+  },
+  {
+    "id": "math-casework",
+    "domain": "math",
+    "text": "Split the problem into exhaustive, non-overlapping cases and make sure no case is counted twice.",
+    "keywords": ["count", "ways", "cases", "arrangements", "combinations", "permutations", "how", "many", "choose"]
+  },
+  {
+    "id": "math-complement",
+    "domain": "math",
+    "text": "When counting or computing a probability is hard directly, compute the complement and subtract from the total.",
+    "keywords": ["probability", "at", "least", "one", "complement", "chance", "random", "dice", "coin"]
+  },
+  {
+    "id": "math-percent-base",
+    "domain": "math",
+    "text": "For percentage changes, be explicit about the base each percentage refers to; successive changes multiply rather than add.",
+    "keywords": ["percent", "percentage", "increase", "decrease", "discount", "interest", "price", "growth"]
+  },
+  {
+    "id": "math-geometry-diagram",
+    "domain": "math",
+    "text": "Label every known length and angle on a diagram, then look for similar triangles, right angles or symmetry.",
+    "keywords": ["triangle", "angle", "circle", "area", "perimeter", "radius", "geometry", "length", "square"]
+  },
+  {
+    "id": "math-modular",
+    "domain": "math",
+    "text": "For remainders and divisibility, work modulo the divisor throughout and reduce intermediate results early.",
+    "keywords": ["remainder", "divisible", "modulo", "mod", "divides", "digit", "last", "prime"]
+  },
+  {
+    "id": "code-edge-cases",
+    "domain": "coding",
+    "text": "List the edge cases first: empty input, a single element, duplicates, negative numbers and the maximum size.",
+    "keywords": ["function", "array", "list", "input", "empty", "edge", "case", "string", "return"]
+  },
+  {
+    "id": "code-off-by-one",
+    "domain": "coding",
+    "text": "Check loop bounds and slice indices for off-by-one errors by tracing the first and last iteration.",
+    "keywords": ["loop", "index", "range", "bounds", "slice", "iterate", "for", "while", "off", "by"]
+  },
+  {
+    "id": "code-complexity",
+    "domain": "coding",
+    "text": "Estimate the time complexity against the input limits before writing code; nested loops over large inputs usually need a hash map, sorting or two pointers.",
+    "keywords": ["complexity", "efficient", "performance", "large", "constraints", "time", "optimize", "fast", "big", "o"]
+  },
+  {
+    "id": "code-trace-example",
+    "domain": "coding",
+    "text": "Trace the code by hand on the given example and compare each intermediate value with what you expect.",
+    "keywords": ["example", "output", "expected", "trace", "debug", "test", "bug", "wrong", "result"]
+  },
+  {
+    "id": "code-recursion-base",
+    "domain": "coding",
+    "text": "For recursion, state the base case and confirm every recursive call moves strictly towards it; consider memoisation for overlapping subproblems.",
+    "keywords": ["recursion", "recursive", "base", "case", "dynamic", "programming", "memoization", "fibonacci", "subproblem"]
+  },
+  {
+    "id": "logic-restate",
+    "domain": "reasoning",
+    "text": "Restate exactly what the question asks for, including the form of the answer, before continuing.",
+    "keywords": ["question", "asks", "find", "determine", "which", "answer", "what"]
+  },
+  {
+    "id": "logic-assumptions",
+    "domain": "reasoning",
+    "text": "Separate what the problem states from what you have assumed, and check whether any assumption is unjustified.",
+    "keywords": ["assume", "assumption", "given", "statement", "premise", "conclusion", "infer", "implies"]
+  },
+  {
+    "id": "logic-contrapositive",
+    "domain": "reasoning",
+    "text": "An implication 'if A then B' is equivalent to 'if not B then not A', but not to 'if B then A'.",
+    "keywords": ["if", "then", "implies", "converse", "contrapositive", "necessary", "sufficient", "logic", "only"]
+  },
+  {
+    "id": "logic-eliminate",
+    "domain": "reasoning",
+    "text": "Eliminate options that contradict any stated fact, then compare the remaining options directly.",
+    "keywords": ["option", "choice", "options", "eliminate", "multiple", "correct", "statement", "true", "false"]
+  },
+  {
+    "id": "logic-table",
+    "domain": "reasoning",
+    "text": "For puzzles that match people to attributes, build a grid of possibilities and cross out cells as each clue is applied.",
+    "keywords": ["puzzle", "each", "person", "clue", "who", "house", "owns", "lives", "match"]
+  },
+  {
+    "id": "general-estimate",
+    "domain": "general",
+    "text": "Make a rough estimate of the answer's magnitude first so an implausible final result stands out.",
+    "keywords": ["estimate", "approximately", "roughly", "magnitude", "total", "large", "number"]
+  },
+  {
+    "id": "general-recheck-arithmetic",
+    "domain": "general",
+    "text": "Recompute the last arithmetic step another way, for example by reversing the operation.",
+    "keywords": ["calculate", "compute", "multiply", "divide", "add", "subtract", "arithmetic", "total", "sum"]
+  }
+]

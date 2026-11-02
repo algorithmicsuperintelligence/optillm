@@ -53,6 +53,23 @@ jobs:
         python tests/test_ci_quick.py
         python -m pytest tests/test_plugins.py -v --tb=short || python tests/test_plugins.py
         python -m pytest tests/test_proxy_plugin.py -v --tb=short
+        python -m pytest tests/test_streaming_hints.py -v --tb=short
+        python -m pytest tests/test_plugin_gating.py -v --tb=short
+        python -m pytest tests/test_max_completion_tokens.py -v --tb=short
+        python -m pytest tests/test_bon_candidate_filtering.py -v --tb=short
+        python -m pytest tests/test_compact_plugin.py -v --tb=short
+        python -m pytest tests/test_completions_endpoint.py -v --tb=short
+        python -m pytest tests/test_entropy_decoding_sampling.py -v --tb=short
+        python -m pytest tests/test_mars_agent_routing.py -v --tb=short
+        python -m pytest tests/test_mars_aggregation_sampling.py -v --tb=short
+        python -m pytest tests/test_mars_imo25.py -v --tb=short
+        python -m pytest tests/test_mars_workspace_verification.py -v --tb=short
+        python -m pytest tests/test_mcts_selection.py -v --tb=short
+        python -m pytest tests/test_privacy_plugin_performance.py -v --tb=short
+        python -m pytest tests/test_readurls_ssrf.py -v --tb=short
+        python -m pytest tests/test_rstar_backpropagation.py -v --tb=short
+        python -m pytest tests/test_rstar_numeric_answers.py -v --tb=short
+        python -m pytest tests/test_z3_solver_guard.py -v --tb=short
         python tests/test_approaches.py
         python tests/test_reasoning_simple.py
         python tests/test_batching.py
@@ -125,7 +142,7 @@ jobs:
         OPTILLM_API_KEY=optillm python tests/test_reasoning_integration.py
         OPTILLM_API_KEY=optillm python tests/test_json_plugin.py
         OPTILLM_API_KEY=optillm python tests/test_n_parameter.py
-        OPTILLM_API_KEY=optillm python -m pytest tests/test_api_compatibility.py -v --tb=short || echo "API compatibility tests require pytest"
+        OPTILLM_API_KEY=optillm python -m pytest tests/test_api_compatibility.py -v --tb=short
         OPTILLM_API_KEY=optillm python tests/test.py --approaches none --single-test "Simple Math Problem" || echo "Main test completed"
 
         # Run SSL config tests (no server needed but requires proper env setup)
@@ -256,7 +273,6 @@ jobs:
   mcp-tests:
     runs-on: ubuntu-latest
     needs: unit-tests
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only run on main branch pushes (secrets available)
     strategy:
       matrix:
         python-version: ['3.12']
@@ -296,5 +312,6 @@ jobs:
         echo "MCP tests completed successfully!"
       env:
         OPTILLM_API_KEY: optillm
+        # Not available on fork PRs, where the one test that needs it skips itself
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         HF_TOKEN: ${{ secrets.HF_TOKEN }}

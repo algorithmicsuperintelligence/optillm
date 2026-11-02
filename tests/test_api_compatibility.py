@@ -11,6 +11,8 @@ import json
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# pytest puts the repo root on sys.path because tests/ is a package, not tests/ itself
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import test utilities
 from test_utils import setup_test_env, get_test_client, TEST_MODEL

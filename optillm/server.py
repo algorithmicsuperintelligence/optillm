@@ -197,6 +197,7 @@ server_config = {
     'ssl_verify': True,
     'ssl_cert_path': '',
     'readurls_allow_internal': False,
+    'enable_unsafe_plugins': '',
 }
 
 # List of known approaches
@@ -286,9 +287,19 @@ def none_approach(
         logger.error(f"Error in none approach: {str(e)}")
         raise
 
+# Plugins that execute arbitrary code are disabled by default and require an
+# explicit opt-in via --enable-unsafe-plugins (env: OPTILLM_ENABLE_UNSAFE_PLUGINS).
+UNSAFE_DEFAULT_DISABLED_PLUGINS = {"executecode"}
+
 def load_plugins():
    # Clear existing plugins first but modify the global dict in place
    plugin_approaches.clear()
+
+   # Slugs explicitly opted in via --enable-unsafe-plugins (env:
+   # OPTILLM_ENABLE_UNSAFE_PLUGINS). The env fallback covers the initial
+   # load in main(), which runs before parse_args() populates server_config.
+   enabled_arg = server_config.get('enable_unsafe_plugins', '') or os.environ.get('OPTILLM_ENABLE_UNSAFE_PLUGINS', '')
+   enabled_unsafe_plugins = {slug.strip() for slug in enabled_arg.split(',') if slug.strip()}
 
    # Get installed package plugins directory
    import optillm
@@ -329,6 +340,12 @@ def load_plugins():
                spec.loader.exec_module(module)
 
                if hasattr(module, 'SLUG') and hasattr(module, 'run'):
+                   if module.SLUG in UNSAFE_DEFAULT_DISABLED_PLUGINS and module.SLUG not in enabled_unsafe_plugins:
+                       logger.warning(
+                           f"Plugin '{module.SLUG}' is disabled by default because it executes arbitrary code. "
+                           f"Start optillm with --enable-unsafe-plugins={module.SLUG} "
+                           f"(env: OPTILLM_ENABLE_UNSAFE_PLUGINS) to allow it.")
+                       continue
                    if module.SLUG in plugin_approaches:
                        logger.info(f"Overriding {source} plugin: {module.SLUG}")
                    plugin_approaches[module.SLUG] = module.run
@@ -404,6 +421,11 @@ def execute_single_approach(approach, system_prompt, initial_query, client, mode
             # Remove items that are handled separately by the framework
             # Note: 'n' is NOT removed - the none_approach passes it to the client which handles multiple completions
             kwargs.pop('stream', None)  # stream is handled by proxy()
+
+            # _execute_completion copies max_completion_tokens to max_tokens for approaches;
+            # don't forward the copy, since o-series and gpt-5 models reject max_tokens.
+            if kwargs.get('max_completion_tokens') is not None:
+                kwargs.pop('max_tokens', None)
 
             # Pass the original messages through when available so multi-turn
             # structure, tool_calls and tool results reach the provider intact.
@@ -1260,6 +1282,7 @@ def parse_args():
         ("--log-conversations", "OPTILLM_LOG_CONVERSATIONS", bool, False, "Enable conversation logging with full metadata"),
         ("--conversation-log-dir", "OPTILLM_CONVERSATION_LOG_DIR", str, str(Path.home() / ".optillm" / "conversations"), "Directory to save conversation logs"),
         ("--readurls-allow-internal", "OPTILLM_READURLS_ALLOW_INTERNAL", bool, False, "Allow the readurls plugin to fetch non-public/internal URLs (disables SSRF protection)"),
+        ("--enable-unsafe-plugins", "OPTILLM_ENABLE_UNSAFE_PLUGINS", str, "", "Comma-separated slugs of code-executing plugins (e.g. executecode) to enable; such plugins are disabled by default"),
     ]
 
     for arg, env, type_, default, help_text, *extra in args_env:
@@ -1353,6 +1376,10 @@ def main():
     args = parse_args()
     # Update server_config with all argument values
     server_config.update(vars(args))
+
+    # Reload plugins now that server_config reflects the CLI/env options, so
+    # --enable-unsafe-plugins (and --plugins-dir) take effect for the loaded set.
+    load_plugins()
 
     port = server_config['port']
 
