@@ -99,6 +99,11 @@ def run_streaming_hints(
         truncated = choice.finish_reason == "length" or used_tokens >= segment_tokens
 
         injection = retriever.feed(text)
+        # Punctuation at the end of a stopped segment has no trailing
+        # whitespace, so feed() leaves that sentence pending. A truncated
+        # segment is still open: the next segment may continue it.
+        if injection is None and choice.finish_reason == "stop" and not truncated:
+            injection = retriever.flush()
         if injection:
             kept = text[: injection.offset]
             output += kept

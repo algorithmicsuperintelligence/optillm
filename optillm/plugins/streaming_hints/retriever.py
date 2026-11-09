@@ -54,6 +54,7 @@ class StreamingHintRetriever:
         self.pending = ""
         self.chars_since_injection = 0
         self.used: List[str] = []
+        self._last_delta_length = 0
 
     def feed(self, delta: str) -> Optional[Injection]:
         """
@@ -61,6 +62,7 @@ class StreamingHintRetriever:
         in it, or None. On an injection the text after the offset is treated
         as discarded and is not kept in the retriever's state.
         """
+        self._last_delta_length = len(delta)
         if len(self.used) >= self.max_hints:
             self.text += delta
             return None
@@ -83,6 +85,31 @@ class StreamingHintRetriever:
 
         self.pending += delta[consumed:]
         return None
+
+    def flush(self) -> Optional[Injection]:
+        """Close the trailing sentence of a finished segment.
+
+        feed() ends a sentence only on punctuation followed by whitespace, or
+        on a newline, so a later chunk can still continue it. A segment that
+        stops has no later chunk, and a reply ending in "Wait, check the
+        units." would otherwise stay pending and never be an injection point.
+        The offset is the end of the segment passed to the last feed().
+        """
+        if len(self.used) >= self.max_hints:
+            return None
+        sentence = self.pending
+        if not sentence.strip():
+            self.pending = ""
+            return None
+        self.pending = ""
+        self.text += sentence
+        self.chars_since_injection += len(sentence)
+        if not self._is_injection_point(sentence):
+            return None
+        injection = self._retrieve(self._last_delta_length)
+        if injection:
+            self.chars_since_injection = 0
+        return injection
 
     def _is_injection_point(self, sentence: str) -> bool:
         if self.chars_since_injection < self.min_gap_chars:
