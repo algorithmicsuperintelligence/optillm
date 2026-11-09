@@ -176,5 +176,64 @@ class TestProxyModels(unittest.TestCase):
         self.assertEqual(resp.get_json()["data"], [{"id": "local-model"}])
 
 
+class TestProxyEnvInterpolation(unittest.TestCase):
+    """${VAR:-${OTHER}} is the fallback form in proxy/example_config.yaml."""
+
+    def setUp(self):
+        self._saved = {
+            key: os.environ.get(key) for key in ("OPENAI_API_KEY", "OPENAI_API_KEY_2")
+        }
+        os.environ["OPENAI_API_KEY"] = "sk-primary"
+        os.environ.pop("OPENAI_API_KEY_2", None)
+
+    def tearDown(self):
+        for key, value in self._saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def test_nested_default_uses_the_inner_variable(self):
+        text = "${OPENAI_API_KEY_2:-${OPENAI_API_KEY}}"
+        self.assertEqual(ProxyConfig._interpolate_env_vars(text), "sk-primary")
+
+    def test_set_outer_variable_does_not_keep_a_trailing_brace(self):
+        os.environ["OPENAI_API_KEY_2"] = "sk-secondary"
+        text = "key=${OPENAI_API_KEY_2:-${OPENAI_API_KEY}}"
+        self.assertEqual(ProxyConfig._interpolate_env_vars(text), "key=sk-secondary")
+
+    def test_simple_values_and_missing_variables_stay_compatible(self):
+        self.assertEqual(ProxyConfig._interpolate_env_vars("${OPENAI_API_KEY}"), "sk-primary")
+        self.assertEqual(
+            ProxyConfig._interpolate_env_vars("${MISSING_OPTILLM_VAR:-fallback}"),
+            "fallback",
+        )
+        self.assertEqual(
+            ProxyConfig._interpolate_env_vars(
+                "${MISSING_OPTILLM_VAR:-literal{brace}"
+            ),
+            "literal{brace",
+        )
+        self.assertEqual(
+            ProxyConfig._interpolate_env_vars("x ${MISSING_OPTILLM_VAR} y"),
+            "x ${MISSING_OPTILLM_VAR} y",
+        )
+        self.assertEqual(
+            ProxyConfig._interpolate_env_vars(
+                {"api_key": "${OPENAI_API_KEY_2:-${OPENAI_API_KEY}}"}
+            ),
+            {"api_key": "sk-primary"},
+        )
+        with patch.dict(
+            os.environ, {"OPENAI_API_KEY_2": "literal-${OPENAI_API_KEY}"}
+        ):
+            self.assertEqual(
+                ProxyConfig._interpolate_env_vars(
+                    "${OPENAI_API_KEY_2:-${OPENAI_API_KEY}}"
+                ),
+                "literal-${OPENAI_API_KEY}",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
