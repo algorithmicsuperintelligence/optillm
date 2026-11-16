@@ -82,6 +82,24 @@ def test_retriever_handles_sentences_split_across_feeds():
     assert injection.offset == len("its here.")
 
 
+def test_flush_injects_the_uncertain_sentence_that_ends_the_reply():
+    # feed() requires whitespace after .?! so a later chunk can continue the
+    # sentence. A finished reply has no later chunk, and this is how a model
+    # actually stops.
+    retriever = StreamingHintRetriever(units_bank(), threshold=0.1, min_gap_chars=20)
+    retriever.reset(PROBLEM)
+    text = "Speed is 80 km/h. Wait, the answer must be in meters per second."
+
+    assert retriever.feed(text) is None
+    injection = retriever.flush()
+
+    assert injection is not None
+    assert injection.hint.id == "units"
+    assert injection.offset == len(text)
+    assert text[: injection.offset].endswith("meters per second.")
+    assert injection.hint.uses == 1
+
+
 def test_retriever_respects_max_hints_and_threshold():
     retriever = StreamingHintRetriever(units_bank(), threshold=0.99, min_gap_chars=0)
     retriever.reset(PROBLEM)
@@ -121,6 +139,72 @@ def test_run_injects_hint_and_continues_from_cut():
     assert "<hint>Check the units of every quantity.</hint>" in continuation
     assert "meters per second.\n<hint>" in continuation
     assert "discarded" not in continuation
+
+
+def test_run_injects_when_the_uncertain_sentence_ends_the_segment():
+    # Longer than the default 200-character gap, and the uncertain sentence
+    # ends the segment with no whitespace after its period.
+    text = (
+        "The distance is 120 km and the time is 1.5 hours. " * 5
+        + "Wait, the question asks for meters per second."
+    )
+    client, calls = fake_client(
+        response(text, tokens=30),
+        response(" About 22.2 m/s.", tokens=8),
+    )
+
+    answer, tokens = run_streaming_hints(
+        "system", PROBLEM, client, "model",
+        request_config={"hint_threshold": 0.1, "show_hints": True},
+        memory_bank=units_bank(),
+    )
+
+    assert tokens == 38
+    assert len(calls) == 2
+    continuation = calls[1]["messages"][1]["content"]
+    assert "meters per second.\n<hint>Check the units of every quantity.</hint>" in continuation
+    assert answer.endswith("About 22.2 m/s.")
+
+
+def test_run_only_flushes_a_normal_stop():
+    text = "The distance is 120 km and the time is 1.5 hours. " * 5 + "Wait, check the units."
+    client, calls = fake_client(response(text, reason="content_filter", tokens=30))
+
+    answer, tokens = run_streaming_hints(
+        "system", PROBLEM, client, "model",
+        request_config={"hint_threshold": 0.1, "show_hints": True},
+        memory_bank=units_bank(),
+    )
+
+    assert answer == text
+    assert tokens == 30
+    assert len(calls) == 1
+    assert "<hint>" not in answer
+
+
+def test_run_keeps_a_decimal_split_across_a_truncated_segment():
+    first = "The distance is 120 km and the time is 1.5 hours. " * 5 + "Wait, perhaps the answer is 3."
+    client, calls = fake_client(
+        response(first, reason="length", tokens=30),
+        response("14 after conversion.", tokens=8),
+        response(" Final answer.", tokens=3),
+    )
+
+    answer, tokens = run_streaming_hints(
+        "system", PROBLEM, client, "model",
+        request_config={
+            "hint_threshold": 0.1,
+            "segment_tokens": 30,
+            "show_hints": True,
+        },
+        memory_bank=units_bank(),
+    )
+
+    assert tokens == 41
+    assert len(calls) == 3
+    assert "<hint>Check the units of every quantity.</hint>" not in calls[1]["messages"][1]["content"]
+    assert "3.14 after conversion.\n<hint>" in calls[2]["messages"][1]["content"]
+    assert answer.endswith("Final answer.")
 
 
 def test_run_show_hints_returns_reasoning_with_hint_tags():
