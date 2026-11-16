@@ -93,12 +93,32 @@ class ProxyConfig:
             Processed object with environment variables replaced
         """
         if isinstance(obj, str):
-            # Pattern for ${VAR} or ${VAR:-default}
-            pattern = re.compile(r'\$\{([^}]+)\}')
-            
+            # Match the documented ${VAR:-${FALLBACK}} form before the
+            # existing simple-variable form, so the inner } does not end the
+            # outer match.
+            pattern = re.compile(
+                r'\$\{([^{}:]+):-\$\{([^{}:]+)\}\}|\$\{([^}]+)\}'
+            )
+
             def replacer(match):
-                var_expr = match.group(1)
-                
+                if match.group(1) is not None:
+                    var_name = match.group(1).strip()
+                    value = os.environ.get(var_name)
+                    if value is not None:
+                        return value
+
+                    fallback_expr = match.group(2)
+                    fallback_name = fallback_expr.strip()
+                    value = os.environ.get(fallback_name)
+                    if value is None:
+                        logger.warning(
+                            f"Environment variable ${{{fallback_name}}} not set"
+                        )
+                        return "${" + fallback_expr + "}"
+                    return value
+
+                var_expr = match.group(3)
+
                 # Handle ${VAR:-default} syntax
                 if ':-' in var_expr:
                     var_name, default = var_expr.split(':-', 1)
@@ -106,13 +126,13 @@ class ProxyConfig:
                 else:
                     var_name = var_expr.strip()
                     value = os.environ.get(var_name)
-                    
+
                     if value is None:
                         logger.warning(f"Environment variable ${{{var_name}}} not set")
                         return match.group(0)  # Keep original
-                
+
                 return value
-            
+
             return pattern.sub(replacer, obj)
             
         elif isinstance(obj, dict):
