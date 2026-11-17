@@ -176,6 +176,146 @@ def count_reasoning_tokens(text: str, tokenizer=None) -> int:
     content_length = len(thinking_content.strip())
     return max(1, content_length // 4) if content_length > 0 else 0
 
+def estimate_tokens(text: str) -> int:
+    """Rough token estimate (~4 characters per token) for OpenAI-compatible usage fields."""
+    if not text or not isinstance(text, str):
+        return 0
+    content_length = len(text.strip())
+    return max(1, content_length // 4) if content_length > 0 else 0
+
+def estimate_messages_tokens(messages) -> int:
+    """
+    Estimate prompt_tokens from OpenAI-style chat messages.
+
+    Heuristic only: counts text content (~4 chars/token). Ignores non-text
+    mass such as roles, names, tool_calls, tool results, and image parts.
+    """
+    if not messages:
+        return 0
+    n = 0
+    for m in messages:
+        if not isinstance(m, dict):
+            continue
+        c = m.get("content", "")
+        if isinstance(c, str):
+            n += len(c)
+        elif isinstance(c, list):
+            for p in c:
+                if isinstance(p, dict) and p.get("type") == "text":
+                    n += len(p.get("text", "") or "")
+                elif isinstance(p, str):
+                    n += len(p)
+    return max(1, n // 4) if n > 0 else 0
+
+def _final_content_text(final_content) -> str:
+    if isinstance(final_content, list):
+        return "\n".join(c for c in final_content if isinstance(c, str) and c)
+    if isinstance(final_content, str):
+        return final_content
+    return str(final_content) if final_content else ""
+
+def _contents_from_completion(result) -> str:
+    """Extract assistant text content from a chat.completion-shaped dict."""
+    if not isinstance(result, dict):
+        return ""
+    texts = []
+    for choice in result.get("choices") or []:
+        if not isinstance(choice, dict):
+            continue
+        message = choice.get("message") or {}
+        content = message.get("content")
+        if isinstance(content, str) and content:
+            texts.append(content)
+    return _final_content_text(texts)
+
+def build_usage(
+    messages,
+    *,
+    completion_tokens=None,
+    reasoning_tokens: int = 0,
+    final_content=None,
+    completion_tokens_details=None,
+) -> dict:
+    """
+    Build an OpenAI-compatible usage object.
+
+    Prefer a known positive completion_tokens count when provided. If the
+    count is missing or zero while final_content is non-empty, estimate
+    completion size from that content. prompt_tokens are estimated from the
+    original request messages.
+    """
+    prompt_tokens = estimate_messages_tokens(messages)
+    content_text = _final_content_text(final_content)
+    if completion_tokens is None:
+        completion_tokens = estimate_tokens(content_text) if content_text else 0
+    else:
+        try:
+            completion_tokens = int(completion_tokens)
+        except (TypeError, ValueError):
+            completion_tokens = 0
+        if completion_tokens == 0 and content_text:
+            completion_tokens = estimate_tokens(content_text)
+
+    details = {}
+    if isinstance(completion_tokens_details, dict):
+        details.update(completion_tokens_details)
+    details["reasoning_tokens"] = reasoning_tokens or details.get("reasoning_tokens") or 0
+
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": prompt_tokens + completion_tokens,
+        "completion_tokens_details": details,
+    }
+
+def ensure_usage(result, messages):
+    """
+    Ensure a chat.completion dict has prompt_tokens / total_tokens populated.
+
+    Leaves complete upstream usage alone (including prompt_tokens=0).
+    If prompt_tokens is present but total_tokens is missing, fills total only.
+    """
+    if not isinstance(result, dict):
+        return result
+    usage = result.get("usage")
+    if isinstance(usage, dict) and usage.get("prompt_tokens") is not None:
+        if usage.get("total_tokens") is not None:
+            return result
+        out = dict(result)
+        new_usage = dict(usage)
+        try:
+            prompt = int(usage.get("prompt_tokens") or 0)
+        except (TypeError, ValueError):
+            prompt = 0
+        try:
+            completion = int(usage.get("completion_tokens") or 0)
+        except (TypeError, ValueError):
+            completion = 0
+        new_usage["total_tokens"] = prompt + completion
+        out["usage"] = new_usage
+        return out
+
+    existing_completion = None
+    reasoning_tokens = 0
+    existing_details = None
+    if isinstance(usage, dict):
+        if usage.get("completion_tokens") is not None:
+            existing_completion = usage.get("completion_tokens")
+        details = usage.get("completion_tokens_details")
+        if isinstance(details, dict):
+            existing_details = dict(details)
+            reasoning_tokens = details.get("reasoning_tokens") or 0
+
+    out = dict(result)
+    out["usage"] = build_usage(
+        messages,
+        completion_tokens=existing_completion,
+        reasoning_tokens=reasoning_tokens,
+        final_content=_contents_from_completion(result),
+        completion_tokens_details=existing_details,
+    )
+    return out
+
 # Server configuration
 server_config = {
     'approach': 'none',
@@ -586,31 +726,39 @@ def execute_n_times(n: int, approaches, operation: str, system_prompt: str, init
         return responses[0], total_tokens
     return responses, total_tokens
 
-def generate_streaming_response(final_response, model):
+def generate_streaming_response(final_response, model, usage=None, include_usage=False):
     # Generate a unique response ID
     response_id = f"chatcmpl-{int(time.time()*1000)}"
     created = int(time.time())
+    meta = {
+        "id": response_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": model,
+    }
 
     # Yield the final response with OpenAI-compatible format
     if isinstance(final_response, list):
-        for index, response in enumerate(final_response):
-            # First chunk includes role
+        if not final_response:
             yield "data: " + json.dumps({
-                "id": response_id,
-                "object": "chat.completion.chunk",
-                "created": created,
-                "model": model,
-                "choices": [{"delta": {"role": "assistant", "content": response}, "index": index, "finish_reason": "stop"}],
+                **meta,
+                "choices": [{"delta": {"role": "assistant", "content": ""}, "index": 0, "finish_reason": "stop"}],
             }) + "\n\n"
+        else:
+            for index, response in enumerate(final_response):
+                yield "data: " + json.dumps({
+                    **meta,
+                    "choices": [{"delta": {"role": "assistant", "content": response}, "index": index, "finish_reason": "stop"}],
+                }) + "\n\n"
     else:
-        # First chunk includes role
         yield "data: " + json.dumps({
-            "id": response_id,
-            "object": "chat.completion.chunk",
-            "created": created,
-            "model": model,
+            **meta,
             "choices": [{"delta": {"role": "assistant", "content": final_response}, "index": 0, "finish_reason": "stop"}],
         }) + "\n\n"
+
+    # OpenAI stream_options.include_usage: final chunk with choices=[] and usage.
+    if include_usage and usage:
+        yield "data: " + json.dumps({**meta, "choices": [], "usage": usage}) + "\n\n"
 
     # Yield the final message to indicate the stream has ended
     yield "data: [DONE]\n\n"
@@ -941,7 +1089,8 @@ def _execute_completion(data: dict, messages: list, bearer_token: str) -> Comple
                     'operation': operation,
                     'n': n,
                     'stream': stream,
-                    'optillm_approach': optillm_approach
+                    'optillm_approach': optillm_approach,
+                    'messages': messages,
                 }
 
                 logger.debug("Routing request to batch processor")
@@ -1032,17 +1181,33 @@ def proxy():
     if stream:
         if isinstance(outcome.response, dict):
             # Full completion dict from the 'none' approach or a full-response plugin
+            response = ensure_usage(outcome.response, messages)
             if outcome.request_id:
                 logger.info(f'Request {outcome.request_id}: Completed (streaming response)')
-            return Response(generate_streaming_completion(outcome.response, outcome.model, include_usage), content_type='text/event-stream')
+            return Response(generate_streaming_completion(response, outcome.model, include_usage), content_type='text/event-stream')
         response = _normalize_response_texts(outcome.response)
-        return Response(generate_streaming_response(response, outcome.model), content_type='text/event-stream')
+        reasoning_tokens = 0
+        if isinstance(response, str):
+            reasoning_tokens = count_reasoning_tokens(response)
+        elif isinstance(response, list) and response:
+            reasoning_tokens = sum(count_reasoning_tokens(resp) for resp in response if isinstance(resp, str))
+        usage = build_usage(
+            messages,
+            completion_tokens=outcome.completion_tokens,
+            reasoning_tokens=reasoning_tokens,
+            final_content=response,
+        )
+        return Response(
+            generate_streaming_response(response, outcome.model, usage=usage, include_usage=include_usage),
+            content_type='text/event-stream',
+        )
 
     if isinstance(outcome.response, dict):
         # Full completion dict: return it directly
+        response = ensure_usage(outcome.response, messages)
         if outcome.request_id:
             logger.info(f'Request {outcome.request_id}: Completed')
-        return jsonify(outcome.response), 200
+        return jsonify(response), 200
 
     response = _normalize_response_texts(outcome.response)
 
@@ -1054,15 +1219,17 @@ def proxy():
         # For multiple responses, sum up reasoning tokens from all
         reasoning_tokens = sum(count_reasoning_tokens(resp) for resp in response if isinstance(resp, str))
 
+    usage = build_usage(
+        messages,
+        completion_tokens=outcome.completion_tokens,
+        reasoning_tokens=reasoning_tokens,
+        final_content=response,
+    )
+
     response_data = {
         'model': outcome.model,
         'choices': [],
-        'usage': {
-            'completion_tokens': outcome.completion_tokens,
-            'completion_tokens_details': {
-                'reasoning_tokens': reasoning_tokens
-            }
-        }
+        'usage': usage,
     }
 
     if isinstance(response, list):
@@ -1144,11 +1311,15 @@ def completions():
     passthrough_usage = None
     model = outcomes[-1].model
 
-    for outcome in outcomes:
+    for outcome, single_prompt in zip(outcomes, prompts):
         if outcome.passthrough is not None:
             # Full completion dict (batch mode / 'none' approach / full-response
             # plugin): map chat choices to legacy text choices
-            for choice in outcome.response.get('choices', []):
+            ensured = ensure_usage(
+                outcome.response,
+                [{"role": "user", "content": single_prompt}],
+            )
+            for choice in ensured.get('choices', []):
                 message = choice.get('message') or {}
                 choices.append({
                     'index': len(choices),
@@ -1156,8 +1327,8 @@ def completions():
                     'logprobs': choice.get('logprobs'),
                     'finish_reason': choice.get('finish_reason', 'stop'),
                 })
-            if outcome.response.get('usage'):
-                passthrough_usage = outcome.response['usage']
+            if ensured.get('usage'):
+                passthrough_usage = ensured['usage']
             continue
 
         response = _normalize_response_texts(outcome.response)
@@ -1172,18 +1343,22 @@ def completions():
                 'finish_reason': 'stop',
             })
 
+    if passthrough_usage is not None:
+        usage = passthrough_usage
+    else:
+        usage = build_usage(
+            [{"role": "user", "content": p} for p in prompts],
+            completion_tokens=completion_tokens_total,
+            reasoning_tokens=reasoning_tokens_total,
+        )
+
     response_data = {
         'id': f"cmpl-{uuid.uuid4().hex}",
         'object': 'text_completion',
         'created': int(time.time()),
         'model': model,
         'choices': choices,
-        'usage': passthrough_usage if passthrough_usage is not None else {
-            'completion_tokens': completion_tokens_total,
-            'completion_tokens_details': {
-                'reasoning_tokens': reasoning_tokens_total
-            }
-        }
+        'usage': usage,
     }
 
     # Log the final response and finalize conversation logging for the normal
@@ -1467,15 +1642,16 @@ def main():
                             n, approaches, operation, system_prompt, initial_query, client, model, request_config)
 
                     # Convert tagged conversation to messages format if needed
+                    req_messages = req_data.get('messages') or []
                     if isinstance(result, list):
                         processed_response = tagged_conversation_to_messages(result)
                         if processed_response != result:  # Only process if format changed
                             result = [msg[-1]['content'] if isinstance(msg, list) and msg else msg
                                     for msg in processed_response]
                     else:
-                        messages = tagged_conversation_to_messages(result)
-                        if isinstance(messages, list) and messages:  # Only process if format changed
-                            result = messages[-1]['content']
+                        converted = tagged_conversation_to_messages(result)
+                        if isinstance(converted, list) and converted:  # Only process if format changed
+                            result = converted[-1]['content']
 
                     # Generate the response in OpenAI format
                     if isinstance(result, list):
@@ -1499,17 +1675,18 @@ def main():
                             "finish_reason": "stop"
                         }]
 
+                    usage = build_usage(
+                        req_messages,
+                        completion_tokens=completion_tokens if isinstance(completion_tokens, int) else 0,
+                        final_content=result,
+                    )
                     response_dict = {
                         "id": f"chatcmpl-{int(time.time()*1000)}-{i}",
                         "object": "chat.completion",
                         "created": int(time.time()),
                         "model": model,
                         "choices": choices,
-                        "usage": {
-                            "prompt_tokens": 0,  # Will be calculated properly later
-                            "completion_tokens": completion_tokens if isinstance(completion_tokens, int) else 0,
-                            "total_tokens": completion_tokens if isinstance(completion_tokens, int) else 0
-                        }
+                        "usage": usage,
                     }
 
                     responses.append(response_dict)
